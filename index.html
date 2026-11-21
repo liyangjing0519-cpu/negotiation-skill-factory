@@ -1180,7 +1180,7 @@ function initState(){
     evidence:'neutral', harm:false, lastSkill:null, lastOfferSkill:null, dealClosed:false, lastAttackType:null, attackMemory:{}, lastRoundCost:0,
     scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
     replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[],
-    skillStore:null, annotations:[], skillNote:'',
+    skillStore:null, annotations:[], skillNote:'', trainingDirectives:null,
     cfg: deepCopy(DEFAULT_CFG),
     pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
     belowTargetStreak: 0, forceUpgrade: false, currentTarget: 85, v2pred: 30, redlineFlagged: {},
@@ -2086,9 +2086,10 @@ function buildReply(skill, trigger, info){
     let op = typeof o === 'function' ? o(ctx) : String(o);
     let ac = typeof a === 'function' ? a(ctx) : String(a);
     // ★ 询问金额/进度：必须用直答句覆盖技能话术，正面给出数字/时间
-    if(intent === 'askAmount') ac = amountAction(ctx, info);
-    else if(intent === 'askProgress') ac = progressAction();
+    // 训练指令 replyAskAmount：标注"金额不明"后，即使非标准问句也强制金额直答
     const sig = G.fbSignals || {};
+    if(intent === 'askAmount' || sig.replyAskAmount) ac = amountAction(ctx, info);
+    else if(intent === 'askProgress') ac = progressAction();
     if(sig.lang && sig.lang.empathize && !/理解|抱歉|着急|心情|歉|体谅/.test(op)) op = '我特别理解您的感受，' + op;
     if(sig.lang && sig.lang.concise) ac = ac.split('。')[0] + '。';
     text = prefix + op + ac;
@@ -2183,6 +2184,12 @@ function runRound(trigger){
     tr.rebel.lines.push('等级判定：Lv.' + info.level + ' ｜ 攻势增益 = 基础' + ATTACK_TYPES[info.type] + ' + 等级×3 + 严重度 = ' + effGain + (mem>0 && info.level<3 ? '（含记忆升级 +3）' : ''));
     tr.rebel.lines.push('记忆库：「' + info.type + '」型已出现 ' + mem + ' 次' + (mem>0 ? ' → 反贼记住了忠臣上次的解法，同型自动升级' : '（首次出现）'));
     tr.rebel.lines.push('场景属性：人格「' + persona + '」（' + personaRes.src + '）｜ 难度设定 ' + (diffBase==='auto' ? '自动' : 'Lv.' + diffBase) + ' ｜ 证据严格度 ' + (evStrict==='loose'?'宽松（中性→强）':(evStrict==='strict'?'严格（强需核验）':'标准')));
+    // ★ 训练指令注入（反贼）：读取 skill 文件的标注/批注，用于本轮发难方向
+    const TD = (trigger.source === 'sandbox') ? G.trainingDirectives : null;
+    if(TD){
+      tr.rebel.lines.push('📖 训练指令（来自 skill 文件标注' + TD.annCount + '条/批注' + TD.noteCount + '条）：' + TD.signals.slice(0,3).join('、'));
+      if(TD.rebelChallenges.length) tr.rebel.lines.push('本轮针对性发难方向：' + TD.rebelChallenges.join(' / '));
+    }
 
     const srcLabel = trigger.source === 'sandbox' ? '（灌入剧本）' : '';
     await say('【反贼】情景模拟器', 'n-rebel',
@@ -2292,6 +2299,9 @@ function runRound(trigger){
     const needNerf = G.lastRoundCost >= 1200;
     const tooEasy = G.resolution >= 88 && G.round >= 3;
     const spyCandidate = !G.converged && (G.equilibrium >= 55 || tooEasy || needNerf);
+    if(TD){
+      tr.spy.lines.push('📖 训练指令（skill 文件）：' + TD.signals.slice(0,3).join('、') + ' → 搅局侧重：' + (TD.spy.pressure?'加压':(TD.spy.toolNerf?'工具降级':'按均衡信号常规介入')));
+    }
     tr.spy.lines.push('触发评估：均衡信号 ' + Math.round(G.equilibrium) + '%（' + (G.equilibrium>=55?'≥55 命中介入线':'<55') + '）｜ 解决率 ' + Math.round(G.resolution) + '%（' + (tooEasy?'≥88 命中过易线':'<88') + '）｜ 单轮成本 ' + fmtMoney(G.lastRoundCost) + '（' + (needNerf?'≥¥1,200 命中降本线':'<¥1,200') + '）' + (G.converged?' ｜ 已收敛 → 不再介入':''));
     if(!spyCandidate) tr.spy.lines.push('判定：三个触发条件均未命中 → 本轮静观其变（均衡继续累积）');
     if(spyCandidate && rejectPath){
@@ -2384,6 +2394,9 @@ function runRound(trigger){
     popup(actors.hist.x, actors.hist.footY-64, trigger.source==='sandbox' ? '录' : '记', 'hist', true);
     const spyTxt = ({A:'升压',B:'降级/替换',skip:'不搅局',retired:'退场',exhausted:'弹尽',none:'无'})[spyAction] || '无';
     annals('R' + G.round + ' <span class="ar">反贼·' + info.type + 'Lv' + info.level + '(+' + effGain + ')</span> → <span class="al">忠臣·' + skill.name + (cost>0?'(' + fmtMoney(cost) + ')':'') + '</span> → <span class="as">内奸·' + spyTxt + '</span><br>研判：效率 <span class="stars">' + stars(cost, resolveGain) + '</span> ｜ 解决率 ' + Math.round(G.resolution) + '%');
+    if(TD){
+      tr.hist.lines.push('📖 训练指令（skill 文件）：标注' + TD.annCount + '条/批注' + TD.noteCount + '条 → 研判重点：' + TD.hist.watch.join('、'));
+    }
     tr.hist.lines.push('效率研判：化解 ' + resolveGain + ' ÷ (成本 ' + (cost+100) + ') = ' + (resolveGain/(cost+100)).toFixed(3) + ' → ' + stars(cost, resolveGain));
     tr.hist.lines.push('走势：解决率 ' + Math.round(before) + '% → ' + Math.round(G.resolution) + '%（净 ' + (net>=0?'+':'') + net.toFixed(1) + '）｜ 均衡 ' + Math.round(G.equilibrium) + '% ｜ 攻势 ' + Math.round(G.pressure) + '%');
     let arbTxt = '无死局信号，对练继续';
@@ -2549,6 +2562,11 @@ function buildTurns(){
       marks.push(-1);
     }
   }
+  // ★ 训练指令 → 反贼发难剧本（标注/批注转化为真实挑战，贯穿下一轮对练）
+  const TD = G.trainingDirectives;
+  if(TD && TD.rebelChallenges.length){
+    TD.rebelChallenges.forEach(function(ch){ turns.push(ch); marks.push(-1); });
+  }
   G.scenarios.forEach(function(sc, si){
     const parts = splitScenario(sc.text).slice(0,3);
     const info = analyze(parts[0] || sc.text);
@@ -2577,8 +2595,8 @@ async function runSandbox(){
   // ★ 再次对练：先读 skill 文件的标注 + 批注 → 更新 skill → 再开练
   const applied = applySkillFileBeforeSandbox();
   if(applied){
-    annals('📖 再次对练：已读取 skill 文件——' + applied.annCount + ' 条对话标注 + 批注 → 更新〔' + applied.rec.key + '〕v' + applied.rec.version
-      + '（路径前置：' + applied.signals.slice(0,3).join('、') + '）→ 再开练。', 'gold');
+    annals('📖 再次对练：已读取 skill 文件——' + applied.annCount + ' 条对话标注 + ' + applied.noteCount + ' 条批注（累积全量） → 更新〔' + applied.rec.key + '〕v' + applied.rec.version
+      + '（路径前置：' + applied.signals.slice(0,3).join('、') + '）→ 四角色按统一训练指令再开练。', 'gold');
   }
   resetBattle();
   const ps = G.pendingSkill;
@@ -2750,11 +2768,16 @@ function renderSkillFilePanel(){
     body.innerHTML = '<div class="sf-empty">蒸馏产出后自动存档。可在每条对练记录上打标注、为技能写批注；再次对练会先读回标注/批注，更新 skill 再开练。</div>';
     return;
   }
-  meta.textContent = '当前：' + escT(rec.key) + ' v' + rec.version + ' ｜ ' + (rec.annotations||[]).length + ' 条标注 ｜ 更新于 ' + new Date(f.updatedAt||Date.now()).toLocaleString('zh-CN');
+  const ncnt = Array.isArray(rec.notes) ? rec.notes.length : (rec.note?1:0);
+  meta.textContent = '当前：' + escT(rec.key) + ' v' + rec.version + ' ｜ ' + (rec.annotations||[]).length + ' 条标注 ｜ ' + ncnt + ' 条批注 ｜ 更新于 ' + new Date(f.updatedAt||Date.now()).toLocaleString('zh-CN');
   let h = '';
   h += '<div>技能：<b style="color:var(--gold)">' + escT(rec.key) + ' v' + rec.version + '</b> ｜ 力度 P' + (rec.power||0) + ' ｜ 成本 ¥' + (rec.cost||0) + '</div>';
   h += '<div>路径：' + escT(String(rec.pathDesc||'').split(' → ').slice(0,5).join(' → ')) + '</div>';
-  if(rec.note) h += '<div class="skfile-sec"><b>✎ 技能批注：</b>' + escT(rec.note) + '</div>';
+  const notesArr = Array.isArray(rec.notes) ? rec.notes : (rec.note ? [{text:rec.note}] : []);
+  if(notesArr.length){
+    h += '<div class="skfile-sec"><b>✎ 技能批注（' + notesArr.length + ' 条，累积）：</b></div>';
+    notesArr.slice(-10).forEach(function(n){ h += '<div class="sf-ann">· ' + escT(n.text||'') + '</div>'; });
+  }
   if((rec.annotations||[]).length){
     h += '<div class="skfile-sec"><b>🏷 对话标注（' + rec.annotations.length + ' 条）：</b></div>';
     rec.annotations.slice(-12).forEach(function(a){
@@ -3212,7 +3235,7 @@ function deepMerge(base, over){
    ===================================================== */
 const SKILL_FILE_KEY = 'sgg_skillfile_v1';
 function blankSkillFile(){
-  return { version:1, updatedAt:Date.now(), activeId:null, skills:[], annotations:[], skillNote:'', history:[] };
+  return { version:1, updatedAt:Date.now(), activeId:null, skills:[], annotations:[], notes:[], skillNote:'', history:[] };
 }
 function loadSkillFile(){
   try{
@@ -3235,7 +3258,7 @@ function upsertSkillToFile(skill, tag){
   let rec = f.skills.find(function(x){ return x.key === key; });
   if(!rec){
     rec = { key:key, name:skill.name, version:0, pathDesc:'', desc:'', power:0, cost:0, fbNote:'',
-            annotations:[], note:'', history:[] };
+            annotations:[], notes:[], note:'', history:[] };
     f.skills.push(rec);
   }
   rec.name = skill.name;
@@ -3270,7 +3293,13 @@ function noteSkillToFile(note){
   let rec = f.skills.find(function(x){ return x.key === f.activeId; });
   if(!rec && f.skills.length) rec = f.skills[f.skills.length-1];
   if(!rec) return null;
-  rec.note = String(note || '');
+  if(!Array.isArray(rec.notes)) rec.notes = [];
+  const txt = String(note || '');
+  if(txt){
+    rec.notes.push({ at:Date.now(), text:txt });
+    if(rec.notes.length > 50) rec.notes.shift();
+  }
+  rec.note = txt;  // 最新一条，向下兼容
   saveSkillFile();
   return rec;
 }
@@ -3294,43 +3323,72 @@ function applySkillFileBeforeSandbox(){
   if(!rec) return null;
   const f = G.skillStore;
   const anns = rec.annotations || [];
-  const note = rec.note || '';
-  if(!anns.length && !note.trim()) return null;
-  // 统计高频标注 tag
+  // ★ 读取全部累积批注（不只是最新一条），拼成完整训练语料
+  const notes = Array.isArray(rec.notes) ? rec.notes : (rec.note ? [{text:rec.note}] : []);
+  const noteText = notes.map(function(n){ return n.text || ''; }).filter(Boolean).join('；');
+  if(!anns.length && !noteText.trim()) return null;
+
+  // 统计所有历史标注 tag（累积全量）
   const tally = {};
   anns.forEach(function(a){ if(a.tag) tally[a.tag] = (tally[a.tag]||0)+1; });
   const top = Object.keys(tally).sort(function(a,b){ return tally[b]-tally[a]; });
+
+  // 解析全部批注文本为信号（累积）
+  let noteSig = parseFeedbackSignals({ lang:noteText, progress:noteText, strategy:noteText });
   const sigKeys = [];
   top.forEach(function(tg){ const sg = ANNOT_TAG_SIGNALS[tg]; if(sg && sigKeys.indexOf(sg.desc)<0) sigKeys.push(sg.desc); });
-  // 批注文本解析为信号（复用反馈信号解析器）
-  let noteSig = parseFeedbackSignals({ lang:note, progress:note, strategy:note });
   applySignalSummary(noteSig).forEach(function(x){ if(sigKeys.indexOf(x)<0) sigKeys.push(x); });
   if(!sigKeys.length) sigKeys.push('依据标注与批注做针对性增强');
-  // 更新技能：路径前置新信号、力度微调、版本+1
+
+  // ★ 统一训练指令：四个角色共享（反贼发难方向 / 忠臣应对 / 内奸搅局 / 史官研判）
+  const has = function(k){ return top.indexOf(k) >= 0; };
+  const directives = {
+    round: G.round + 1,
+    annCount: anns.length,
+    noteCount: notes.length,
+    signals: sigKeys.slice(),
+    tags: top.slice(),
+    // 反贼：本轮应追加的发难话术（把人的标注变成具体挑战）
+    rebelChallenges: [],
+    // 忠臣：话术/决策信号
+    loyal: { amount:has('金额不明'), relevance:has('答非所问'), strictDeal:has('误判成交'),
+             earlyOffer:has('绕弯拖延'), empathize:has('话术生硬'), noMech:has('机制外露'), concise:has('表达啰嗦') },
+    // 内奸：搅局侧重
+    spy: { pressure:has('绕弯拖延'), toolNerf:has('金额不明') || !!(noteSig.strategy && noteSig.strategy.costDown) },
+    // 史官：研判侧重
+    hist: { watch: sigKeys.slice(0,3) },
+  };
+  if(has('金额不明')) directives.rebelChallenges.push('你们到底赔多少？给个准数，别绕！');
+  if(has('答非所问')) directives.rebelChallenges.push('我在问你刚才的问题，你倒是正面回答！');
+  if(has('误判成交')) directives.rebelChallenges.push('我可没说同意，方案还得再谈！');
+  if(has('绕弯拖延')) directives.rebelChallenges.push('别再拖流程了，今天给实质方案！');
+  if(notes.length && !directives.rebelChallenges.length) directives.rebelChallenges.push('按之前的意见，这次拿出点诚意来。');
+  G.trainingDirectives = directives;
+
+  // 更新技能本体：路径前置新信号、力度微调、版本+1
   const ver = (G.skillVersions[rec.key] = (G.skillVersions[rec.key] || rec.version || 0) + 1);
-  const prefix = '按标注/批注再训练（' + sigKeys.slice(0,4).join('、') + '）';
+  const prefix = '按标注/批注再训练（' + directives.signals.slice(0,4).join('、') + '）';
   rec.pathDesc = prefix + ' → ' + String(rec.pathDesc || '').replace(/^按标注\/批注再训练（[^）]*）\s*→\s*/,'');
   rec.power = Math.min(48, (rec.power || 24) + (anns.length >= 3 ? 2 : 1));
-  rec.fbNote = '第 ' + ver + ' 版：读取 skill 文件中 ' + anns.length + ' 条对话标注（' + (top.slice(0,3).map(function(t){return t+'×'+tally[t];}).join('、') || '无') + '）与批注，更新路径与力度。';
+  rec.fbNote = '第 ' + ver + ' 版：读取 skill 文件全部 ' + anns.length + ' 条标注（' + (top.slice(0,3).map(function(t){return t+'×'+tally[t];}).join('、') || '无') + '）与 ' + notes.length + ' 条批注，更新路径与力度。';
   rec.version = ver;
   rec.name = rec.key + ' v' + ver;
   rec.history.push({ v:ver, at:Date.now(), tag:'读标注/批注再训练', pathDesc:rec.pathDesc, power:rec.power, cost:rec.cost });
   if(rec.history.length > 12) rec.history.shift();
   f.activeId = rec.key;
   saveSkillFile();
+
   // 同步到内存技能池，供本轮对练使用
   G.extraSkills = G.extraSkills.filter(function(x){ return x.key !== rec.key; });
   G.extraSkills.push({ id:'x_'+rec.key+'_v'+ver, key:rec.key, name:rec.key, version:ver, cost:rec.cost, power:rec.power,
     matchType:rec.matchType, patternId:rec.patternId, pathDesc:rec.pathDesc, fbNote:rec.fbNote, fromFeedback:true });
   if(G.extraSkills.length > 4) G.extraSkills.shift();
   G.skillStatus = freshSkillStatus();
-  // 把标注信号写入话术/决策层：标注 tag 直接映射为可执行信号
+
+  // 忠臣信号仍写入 fbSignals（话术/决策层消费）
   noteSig = noteSig || {};
-  noteSig.lang = noteSig.lang || {};
-  noteSig.progress = noteSig.progress || {};
-  noteSig.strategy = noteSig.strategy || {};
-  noteSig.close = noteSig.close || {};
-  const has = function(k){ return top.indexOf(k) >= 0; };
+  noteSig.lang = noteSig.lang || {}; noteSig.progress = noteSig.progress || {};
+  noteSig.strategy = noteSig.strategy || {}; noteSig.close = noteSig.close || {};
   if(has('金额不明')) noteSig.replyAskAmount = true;
   if(has('答非所问')) noteSig.lang.empathize = true;
   if(has('误判成交')) noteSig.close.strictDeal = true;
@@ -3340,7 +3398,7 @@ function applySkillFileBeforeSandbox(){
   if(has('机制外露')) noteSig.noMech = true;
   G.fbSignals = noteSig;
   G.annotationSignals = sigKeys;
-  return { rec:rec, annCount:anns.length, note:note, signals:sigKeys, tally:tally };
+  return { rec:rec, annCount:anns.length, noteCount:notes.length, note:noteText, signals:sigKeys, tally:tally, directives:directives };
 }
 /* 配置持久化：localStorage 保存/恢复（全局重置与页面刷新后配置保留） */
 function saveCfg(){
