@@ -155,34 +155,6 @@ button.pxbtn.btn-rebel{background:linear-gradient(180deg,#a03a5c,#7c2946);box-sh
 .tc-sec .tc-line{color:var(--ink);}
 .tc-rebel b{color:var(--rebel);} .tc-loyal b{color:var(--loyal);} .tc-spy b{color:var(--spy);} .tc-hist b{color:var(--hist);} .tc-dlg b{color:var(--gold);}
 .tc-dlg .rebel-line{color:#ff9db8;} .tc-dlg .loyal-line{color:#9db9ff;}
-/* 对话标注 */
-.tc-annot{padding:6px 10px;border-top:1px dashed var(--line2);background:rgba(70,200,176,.05);}
-.tc-annot .ta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-.tc-annot .ta-label{font-size:11px;color:var(--hist);font-weight:700;}
-.ta-tag{cursor:pointer;font-size:11px;padding:2px 7px;border:1px solid var(--line2);background:#1b2540;color:var(--dim);border-radius:3px;}
-.ta-tag:hover{filter:brightness(1.3);}
-.ta-tag.on{background:#2a5c4f;color:#c9ffe9;border-color:#46c8b0;}
-.ta-note{flex:1;min-width:120px;font-size:11px;padding:3px 6px;background:#111a2e;border:1px solid var(--line2);color:var(--ink);}
-.ta-save{font-size:11px;padding:3px 9px;cursor:pointer;background:#27503f;color:#c9ffe9;border:1px solid #46c8b0;}
-.ta-save:hover{filter:brightness(1.25);}
-.ta-saved{font-size:11px;color:var(--hist);}
-.tc-annot-mark{font-size:10px;padding:1px 5px;background:#2a5c4f;color:#c9ffe9;margin-left:4px;border-radius:3px;}
-/* skill 文件面板 */
-.skfile-panel{margin-top:12px;border:1px solid var(--line2);background:var(--panel2);padding:10px 12px;}
-.skfile-head{color:var(--gold);font-weight:700;font-size:12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.skfile-head .sf-meta{color:var(--faint);font-weight:400;font-size:11px;}
-.skfile-body{font-size:11.5px;color:var(--dim);line-height:1.85;}
-.skfile-body .sf-empty{color:var(--faint);}
-.skfile-note{width:100%;box-sizing:border-box;min-height:52px;margin-top:6px;font-size:11.5px;padding:6px 8px;background:#111a2e;border:1px solid var(--line2);color:var(--ink);resize:vertical;}
-.skfile-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
-.skfile-actions button{font-size:11px;padding:4px 10px;cursor:pointer;}
-.sf-btn-note{background:#274a7a;color:#d6e8ff;border:1px solid #4f8cff;}
-.sf-btn-read{background:#5a3d12;color:#ffe6b0;border:1px solid #ffb84d;}
-.skfile-sec{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line2);}
-.skfile-sec b{color:var(--hist);}
-.sf-ann{color:var(--dim);font-size:11px;padding:1px 0;}
-.sf-ann .sf-tag{color:#46c8b0;}
-.sf-ver{color:var(--gold);}
 /* 蒸馏产出 */
 .distill-panel{margin-top:14px;display:none;}
 .distill-panel.show{display:block;animation:viewIn .3s steps(5) both;}
@@ -482,10 +454,6 @@ footer b{color:var(--dim);}
         <button class="trace-head" id="traceToggle">📂 对练全记录 · 原文 + 四角色内部决策思考 <span class="chip c-hist" id="traceCount">0 回合</span><span class="tw">▸ 点击展开</span></button>
         <div class="trace-body" id="traceBody"><div class="trace-empty">暂无记录——开始对练后，每一回合的对练原文与反贼 / 忠臣 / 内奸 / 史官的内部决策思考过程都会在此留档</div></div>
       </div>
-      <div class="skfile-panel" id="skfilePanel">
-        <div class="skfile-head">📁 Skill 文件 · 技能档案 <span class="sf-meta" id="sfMeta">尚未沉淀技能</span></div>
-        <div class="skfile-body" id="sfBody"><div class="sf-empty">蒸馏产出后自动存档。可在每条对练记录上打标注、为技能写批注；再次对练会先读回标注/批注，更新 skill 再开练。</div></div>
-      </div>
       <div class="distill-panel" id="distillPanel">
         <div class="panel-head" style="background:linear-gradient(180deg,#2c2410,#1c2338)">✦ 仲裁史官 · 技能蒸馏产出 <span class="sub">本轮对练沉淀出的谈判技能</span></div>
         <div class="distill-card">
@@ -501,11 +469,6 @@ footer b{color:var(--dim);}
             <div id="fbTrainCard" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(70,200,176,.35);border-radius:8px;background:rgba(70,200,176,.06)">
               <div style="color:var(--hist);font-weight:700;margin-bottom:6px;font-size:12px">🧠 反馈 → 训练 → 验证 链路</div>
               <div id="fbTrainBody" style="font-size:11px;line-height:1.85;color:var(--dim)"></div>
-            </div>
-            <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line2)">
-              <div style="color:var(--gold);font-weight:700;font-size:12px;margin-bottom:4px">✎ 技能批注（写回 skill 文件，下次对练前会被读取）</div>
-              <textarea id="skNoteInput" class="skfile-note" placeholder="例如：用户问金额时别绕弯子，直接给确定数字；没明确同意不要宣布达成一致…"></textarea>
-              <div style="margin-top:6px"><button class="pxbtn sf-btn-note" id="skNoteSave">保存批注到 skill 文件</button> <span id="skNoteStatus" style="font-size:11px;color:var(--hist)"></span></div>
             </div>
           </div>
         </div>
@@ -1180,7 +1143,6 @@ function initState(){
     evidence:'neutral', harm:false, lastSkill:null, lastOfferSkill:null, dealClosed:false, lastAttackType:null, attackMemory:{}, lastRoundCost:0,
     scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
     replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[],
-    skillStore:null, annotations:[], skillNote:'',
     cfg: deepCopy(DEFAULT_CFG),
     pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
     belowTargetStreak: 0, forceUpgrade: false, currentTarget: 85, v2pred: 30, redlineFlagged: {},
@@ -1222,34 +1184,15 @@ const ATTACK_TYPES = { '情理攻势':10, '合规威胁':16, '舆论威胁':15, 
 const EV_STRONG = /视频|录音|截图|照片|发票|底单|单据|票据|报告|鉴定|认定书|判例|检测|合同|监控|录屏|工单号|SLA|保价|医院|就医|住院|诊断|骨折|送医|过敏|皮炎|肠胃炎|心悸|副作用|吃出|异物|蟑螂|头发|塑料片|划破|食品安全法|消法|民法典|碎了|破损|磕|划痕|漏液|跑酒|化冻|变质|鼓包|色差|钻绒|不制冷|故障|维权群|政采|代位|消防|信访|消协|留样|医药费|误工费/;
 const EV_WEAK = /空包裹|调包|二手|穿过|吊牌|精神损失|心理创伤|通融|体面|清净|删差评|差评删|十个号|说了算|别管发票|挂二手|毁了我的人生/;
 const HARM_RE = /住院|医院|骨折|医药费|就医|诊断|中毒|过敏|皮炎|划破|送医|副作用|心悸|肠胃炎|受伤/;
-/* 共识达成检测（严格版）：
-   必须同时满足——① 无疑问/否定/条件/追问词；② 纯确认短句（不含金额、诉求、新议题）；
-   ③ 上下文已有明确在谈方案且已向用户报出；④ 通过了 LLM 语义复核（若启用）。
-   任何一条不满足都不判成交，避免"用户还在问金额就被宣布达成一致"。 */
-function isAgreement(text, ctx){
-  const t = String(text || '').trim();
-  if(!t || t.length > 18) return false;
-  // 阻断：疑问 / 追问 / 否定 / 条件 / 转折 / 新诉求
-  if(/[?？]|吗|呢|吧$|多少|几块|几万|怎么|为什么|凭什么|能不能|可不可以|行不行|是不是/.test(t)) return false;
-  if(/不|没|别|再|还|但|不过|然而|除非|另外|还是|如果|要是|先|回头|考虑|想想/.test(t)) return false;
-  if(/赔|补偿|退款|万|元|块|钱|券|方案|条件|凭证|证据|举证|发我|看看|再说/.test(t)) return false;
-  const s = t.replace(/[。！!，,~～\s.]/g, '');
-  // 纯确认短句白名单（整句就是一个确认，而非确认+其他内容）
-  const pure = /^(可以|行|好|嗯|ok|同意|接受|成交|没问题|就这样|准了|认了|定了|可以了|成交吧|就按这个|按这个办|我同意|我接受|那就这样|就这么办|行吧)$/i;
-  if(!pure.test(s)) return false;
-  // 上下文校验：必须已向用户报出过明确方案
-  if(ctx && ctx.requireOffer !== false){
-    if(!ctx.hasOffer) return false;
-    if(!ctx.offerInChat) return false;
-  }
-  return true;
-}
-/* 判断"是否已向用户报出明确方案"：最近一轮 agent 回复是否含实质承诺（金额/时效/专家/举证结论） */
-function offerStatedInChat(){
-  const bubbles = Array.from(document.querySelectorAll('#chatLog .msg.agent .bubble'))
-    .map(function(b){ return b.innerText || ''; });
-  const recent = bubbles.slice(-3).join(' ');
-  return /[¥￥]\s*[\d,]{3,}|\d+\s*万|全额|赔付|补偿|权益券|专家通道|24\s*小时|T\+1|到账|提交审批|加急/.test(recent);
+/* 共识达成检测：用户确认同意 → 触发成交收尾，而非新一轮报价 */
+function isAgreement(text){
+  const t = String(text).trim();
+  if(t.length > 24) return false;
+  if(/[不没别再怎][行好可同意接受]|不满意|不同意|不接受|再想想|再考虑|再谈/.test(t)) return false;
+  if(/但|不过|然而|还要|除非|另外|还是/.test(t)) return false;
+  const stripped = t.replace(/[。！!，,~～\s]/g, '');
+  return /^(可以|行|好|嗯|哦|OK|ok|Ok|同意|接受|成交|没问题|就这样|准了|认了|那就这样|就这么办|按这个|我同意|我接受|我认|行吧|可以了|成交吧)/.test(t)
+      || /(可以|同意|接受|成交|没问题|就这样|办吧|定了)$/.test(stripped);
 }
 const CLOSE_VARIANTS = [
   function(terms){ return '好的，方案确认：' + terms + '。马上为您走流程，有任何进展第一时间同步您——感谢您的耐心沟通，本次谈判到此收尾。'; },
@@ -1343,48 +1286,11 @@ function renderTraceCard(tr){
       '<div class="tc-line rebel-line">反贼：「' + escT(tr.text) + '」</div>' +
       (tr.reply ? '<div class="tc-line loyal-line">忠臣：「' + escT(tr.reply) + '」</div>' : '') +
     '</div>' +
-    '<div class="tc-annot" data-r="' + tr.r + '">' +
-      '<div class="ta-row"><span class="ta-label">标注本轮：</span>' +
-        Object.keys(ANNOT_TAG_SIGNALS).map(function(tg){
-          return '<button class="ta-tag" data-tag="' + tg + '">' + tg + '</button>';
-        }).join('') +
-      '</div>' +
-      '<div class="ta-row" style="margin-top:5px"><input class="ta-note" placeholder="补充说明（可选），将写入 skill 文件…">' +
-        '<button class="ta-save">保存标注</button><span class="ta-saved"></span></div>' +
-    '</div>' +
     sec('tc-rebel', '🗡 反贼 · 情景模拟器 思考', tr.rebel.lines) +
     sec('tc-loyal', '🛡 忠臣 · 内部决策思考', tr.loyal.lines) +
     sec('tc-spy', '🎭 内奸 · 均衡破坏者 思考', tr.spy.lines) +
     sec('tc-hist', '✒ 仲裁史官 · 研判', tr.hist.lines);
   body.appendChild(card);
-  // 标注交互
-  const box = card.querySelector('.tc-annot');
-  if(box){
-    const saved = (G.annotations || []).filter(function(a){ return a.r === tr.r; });
-    const mark = function(tag){ box.querySelector('.ta-saved').textContent = '已标注：' + tag; };
-    if(saved.length && saved[0].tag) mark(saved[0].tag);
-    if(saved.length && saved[0].note) box.querySelector('.ta-note').value = saved[0].note;
-    const tags = box.querySelectorAll('.ta-tag');
-    let chosen = saved.length ? saved[0].tag : '';
-    tags.forEach(function(b){
-      if(b.dataset.tag === chosen) b.classList.add('on');
-      b.onclick = function(){
-        if(chosen === b.dataset.tag){ chosen = ''; b.classList.remove('on'); }
-        else { chosen = b.dataset.tag; tags.forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); }
-      };
-    });
-    box.querySelector('.ta-save').onclick = function(){
-      const note = box.querySelector('.ta-note').value.trim();
-      if(!chosen && !note){ box.querySelector('.ta-saved').textContent = '请选择标签或填写说明'; return; }
-      const entry = { r:tr.r, source:tr.source, text:tr.text, reply:tr.reply, tag:chosen || '自定义', note:note };
-      G.annotations = G.annotations.filter(function(a){ return a.r !== tr.r; });
-      G.annotations.push(entry);
-      annotateToFile(entry);            // ★ 写入 skill 文件
-      mark(chosen || '自定义');
-      annals('🏷 标注 R' + tr.r + '：' + (chosen||'自定义') + (note ? '（' + note.slice(0,30) + '）' : '') + ' → 已写入 skill 文件', 'hist');
-      renderSkillFilePanel();
-    };
-  }
   G.sandbox.traces.push(tr);
   $('traceCount').textContent = G.sandbox.traces.length + ' 回合';
   if($('traceFold').classList.contains('open')) body.scrollTop = body.scrollHeight;
@@ -1521,10 +1427,6 @@ async function llmCall(messages, opts){
     return null;
   }finally{ clearTimeout(timer); }
 }
-/* 仅用于给 LLM 构造建议报价上下文的轻量 skill 占位（不参与决策） */
-function sk0ForCtx(trigger){
-  return { id:'full', name:'报价参考', version:'1.0', pathDesc:'标准赔付', patternId:'full' };
-}
 function llmAvailableSkills(){
   return allSkills().filter(function(s){
     return skillOn(s) && !isDisabled(s) && effCost(s) <= G.budget - G.spent && poolCanAfford(s);
@@ -1538,17 +1440,12 @@ async function llmDecideTurn(trigger, info, effGain){
     '你是资深赔付谈判专家。用户是索赔方，你是客服方。\n' +
     '【内心阶段信息，仅你自己清楚，绝对不能写进对用户的话里】当前第几轮、解决率、攻势、证据状态、剩余预算，以及所选方案的名称、编号、成本、力度。\n' +
     '【任务】根据用户这句话，从给定方案列表里自行选择最合适的一个，并直接对用户说话。\n' +
-    '【硬性要求】1) 回复必须针对用户这句话的具体质疑或诉求作答，不能自说自话；2) 回复里禁止出现任何方案名称、方案编号、技能库、检索、选用、成本、力度、百分比、轮次、阶段等内部机制词；3) 用自然、口语化、有同理心的中文，2-4 句；4) 只返回 JSON：{"skillId":"方案id","reply":"对用户说的话"}。\n' +
-    '【金额红线】若用户在问"到底赔多少/能赔多少/给个准数"，reply 里必须给出一个明确的人民币数字（¥具体金额），绝不能含糊其辞、答非所问或转移话题；金额见 payload 的「建议报价」。\n' +
-    '【成交红线】只有用户明确、无条件地同意当前方案（如"好/可以/就这么办"）时才可选 close；用户还在质疑、追问金额或提出新诉求时，禁止选 close，禁止说"达成一致/方案已定"。';
-  const ctx0 = makeReplyCtx(sk0ForCtx(trigger), trigger, info);
-  const offer = computeOffer(info, ctx0);
+    '【硬性要求】1) 回复必须针对用户这句话的具体质疑或诉求作答，不能自说自话；2) 回复里禁止出现任何方案名称、方案编号、技能库、检索、选用、成本、力度、百分比、轮次、阶段等内部机制词；3) 用自然、口语化、有同理心的中文，2-4 句；4) 只返回 JSON：{"skillId":"方案id","reply":"对用户说的话"}。';
   const payload = {
     用户原话: trigger.text,
     用户类型: info.type,
     严重程度: info.level,
     证据状态: G.evidence,
-    建议报价: '¥' + offer.num + '（' + offer.pct + '）',
     阶段内心: { 轮次:G.round, 解决率:Math.round(G.resolution), 攻势:Math.round(G.pressure), 剩余预算:G.budget - G.spent },
     可选方案: skills.map(function(s){ return { id:s.id, 名称:s.name, 作用:s.desc || s.pathDesc || '', 成本:effCost(s), 力度:s.power }; }),
   };
@@ -1569,11 +1466,6 @@ async function decideTurn(trigger, info, effGain){
     const d = await llmDecideTurn(trigger, info, effGain);
     if(d && d.reply){
       SKILL_TRACE_LOG('大模型决策：从 ' + llmAvailableSkills().length + ' 项可用方案（含第二步蒸馏新增）中自主选择〔' + d.skill.name + '〕，并按用户提问生成自然应答；内部阶段信息不外露');
-      // 金额直答兜底：用户明确问金额但模型回复没给数字 → 用规则引擎的确定金额覆盖
-      if(detectIntent(trigger.text) === 'askAmount' && !/[¥￥]\s*[\d,]+|\d+\s*万/.test(d.reply)){
-        d.reply = amountAction(makeReplyCtx(d.skill, trigger, info), info);
-        SKILL_TRACE_LOG('金额直答兜底：模型未给明确数字，已强制注入确定报价');
-      }
       return d;
     }
   }
@@ -1874,9 +1766,6 @@ const STYLE_PREFIX = {
 };
 function detectIntent(text){
   const t = String(text || '');
-  // 询问类意图优先：用户明确要一个数字/进度，必须正面回答，不能绕
-  if(/到底赔|赔多少|赔几|能赔|赔多少|多少钱|给个?数|报个?价|赔付金额|补偿多少|能补|损失多少|you赔|你们赔|赔钱|多少[^￥\d]*[¥￥元万]|几万|几百块/.test(t)) return 'askAmount';
-  if(/(多久|几天|什么时候|何时|多长|还要等|进度|到帐|到账时间)/.test(t) && !/太慢|拖延|别拖/.test(t)) return 'askProgress';
   if(/现金|转账|不要券|拒收券|只接受现金|别拿券|现金赔偿/.test(t)) return 'cash';
   if(/曝光|热搜|小红书|抖音|媒体|记者|发视频|挂网|发帖/.test(t)) return 'public';
   if(/律师|起诉|法院|法庭|诉讼|仲裁|律师函|判例/.test(t)) return 'legal';
@@ -1888,16 +1777,6 @@ function detectIntent(text){
   return 'default';
 }
 const INTENT_OPENERS = {
-  askAmount: [
-    function(c){ return '您问能赔多少，我不绕弯子，直接给您一个数：'; },
-    function(c){ return '关于赔付金额，我把话说明白——'; },
-    function(c){ return '金额这事我给您交底：'; },
-  ],
-  askProgress: [
-    function(){ return '您问什么时候到账，我说个明确时间：'; },
-    function(){ return '进度这块，我给您一个准信：'; },
-    function(){ return '您要个时间点，我直接说：'; },
-  ],
   cash: [
     function(){ return '我明白您希望拿现金，券对您来说不够实在。'; },
     function(){ return '您说的现金诉求我记下了，这点咱们不绕弯子。'; },
@@ -1981,29 +1860,6 @@ const SKILL_ACTIONS = {
     function(){ return '咱们就按这个方向往下推进，我盯着进度，不让您多等。'; },
   ],
 };
-/* 金额直答：根据用户诉求 + 证据强度，给出明确数字，杜绝绕弯子。
-   保守但确定：强证据→全额，中性→60%，弱证据→给出"可争取上限"并说明举证条件。 */
-function computeOffer(info, ctx){
-  const raw = ctx.amountRaw;
-  const yuan = raw ? raw : 8000;                 // 用户未给数时的演示基准
-  const fmt = function(n){ return Math.round(n).toLocaleString('en-US'); };
-  if(G.evidence === 'strong') return { num: fmt(yuan), pct: '全额', cond: '按您的举证，一次性到位' };
-  if(G.evidence === 'weak')   return { num: fmt(Math.round(yuan*0.4)), pct: '40%', cond: '您补齐订单与损失凭证后，可上调至 60%' };
-  return { num: fmt(Math.round(yuan*0.6)), pct: '60%', cond: '按现有情况先按这个比例推进' };
-}
-function amountAction(ctx, info){
-  const o = computeOffer(info, ctx);
-  return '按您的情况，我们能给出的方案是赔付 ¥' + o.num + '（' + o.pct + '）——' + o.cond
-       + '，今天提交审批，T+1 到账。' ;
-}
-function progressAction(){
-  const v = [
-    '审批今天走完，资金 T+1（次日）到账，我全程盯着，到账第一时间通知您。',
-    '方案确认后当天提交，最迟第二个工作日到账，进度随时可查、我来同步。',
-    '今天提交审批、明天到账，这是确定的时间点，不会让您无限期等。',
-  ];
-  return pickVariant(v, 'progress_action', {});
-}
 function actionKeyFor(skill){
   if(SKILL_ACTIONS[skill.id]) return skill.id;
   if(skill.patternId && SKILL_ACTIONS[skill.patternId]) return skill.patternId;
@@ -2041,7 +1897,6 @@ function makeReplyCtx(skill, trigger, info){
   const cm = t.match(/退款|退货|赔付|赔偿|补偿|换货|维修|退钱|补助|理赔/);
   return {
     amount: amt || '5,000',
-    amountRaw: amtRaw,
     amount60: amtRaw ? Math.round(amtRaw * 0.6).toLocaleString('en-US') : '3,600',
     claim: cm ? cm[0] : '诉求',
     quote: String(info.quote || t).replace(/[<>&"']/g, ''),
@@ -2085,9 +1940,6 @@ function buildReply(skill, trigger, info){
     const prefix = typeof sp === 'function' ? sp(ctx) : String(sp || '');
     let op = typeof o === 'function' ? o(ctx) : String(o);
     let ac = typeof a === 'function' ? a(ctx) : String(a);
-    // ★ 询问金额/进度：必须用直答句覆盖技能话术，正面给出数字/时间
-    if(intent === 'askAmount') ac = amountAction(ctx, info);
-    else if(intent === 'askProgress') ac = progressAction();
     const sig = G.fbSignals || {};
     if(sig.lang && sig.lang.empathize && !/理解|抱歉|着急|心情|歉|体谅/.test(op)) op = '我特别理解您的感受，' + op;
     if(sig.lang && sig.lang.concise) ac = ac.split('。')[0] + '。';
@@ -2428,14 +2280,6 @@ function runRound(trigger){
 }
 /* 成交收尾回合：共识达成 → 确认条款、停止报价，而非再打一轮 */
 async function closeDeal(trigger){
-  // 标注"误判成交"后：沙箱成交剧本也须通过严格确认校验
-  const sig = G.fbSignals || {};
-  if(sig.close && sig.close.strictDeal && trigger.source === 'sandbox'){
-    if(!isAgreement(trigger.text, { requireOffer:false })){
-      annals('🚫 标注生效（误判成交）：剧本句「' + escT(trigger.text) + '」非明确确认 → 拦截成交，改为常规应对', 'hist');
-      return runRound(trigger);
-    }
-  }
   if(G.busy) return;
   G.busy = true; renderHud();
   if(trigger.source === 'chat') $('sendBtn').disabled = true;
@@ -2574,12 +2418,6 @@ function arbitrationCheck(){
 async function runSandbox(){
   if(G.sandbox.running || G.busy) return;
   if(!G.scenarios.length){ annals('史官：还没有灌入场景，回第一步补充剧本原料。', 'hist'); return; }
-  // ★ 再次对练：先读 skill 文件的标注 + 批注 → 更新 skill → 再开练
-  const applied = applySkillFileBeforeSandbox();
-  if(applied){
-    annals('📖 再次对练：已读取 skill 文件——' + applied.annCount + ' 条对话标注 + 批注 → 更新〔' + applied.rec.key + '〕v' + applied.rec.version
-      + '（路径前置：' + applied.signals.slice(0,3).join('、') + '）→ 再开练。', 'gold');
-  }
   resetBattle();
   const ps = G.pendingSkill;
   if(ps){
@@ -2625,7 +2463,7 @@ async function runSandbox(){
       lastMark = mark;
     }
     const scRef = (built.marks[i] >= 0) ? G.scenarios[built.marks[i]] : null;
-    if(isAgreement(built.turns[i], { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: true }) && G.lastOfferSkill && !G.busy){
+    if(isAgreement(built.turns[i]) && G.lastOfferSkill && !G.busy){
       await closeDeal({ source:'sandbox', text: built.turns[i] });
     } else {
       await runRound({ source:'sandbox', text: built.turns[i], scenario: scRef });
@@ -2740,33 +2578,6 @@ function distillSkill(stop, best){
     useCases: G.scenarios.map(function(s){ return splitScenario(s.text)[0]; }).filter(Boolean).slice(0,3),
   };
 }
-function renderSkillFilePanel(){
-  const body = $('sfBody'), meta = $('sfMeta');
-  if(!body) return;
-  const f = G.skillStore || loadSkillFile();
-  const rec = activeSkillRecord();
-  if(!rec){
-    meta.textContent = '尚未沉淀技能';
-    body.innerHTML = '<div class="sf-empty">蒸馏产出后自动存档。可在每条对练记录上打标注、为技能写批注；再次对练会先读回标注/批注，更新 skill 再开练。</div>';
-    return;
-  }
-  meta.textContent = '当前：' + escT(rec.key) + ' v' + rec.version + ' ｜ ' + (rec.annotations||[]).length + ' 条标注 ｜ 更新于 ' + new Date(f.updatedAt||Date.now()).toLocaleString('zh-CN');
-  let h = '';
-  h += '<div>技能：<b style="color:var(--gold)">' + escT(rec.key) + ' v' + rec.version + '</b> ｜ 力度 P' + (rec.power||0) + ' ｜ 成本 ¥' + (rec.cost||0) + '</div>';
-  h += '<div>路径：' + escT(String(rec.pathDesc||'').split(' → ').slice(0,5).join(' → ')) + '</div>';
-  if(rec.note) h += '<div class="skfile-sec"><b>✎ 技能批注：</b>' + escT(rec.note) + '</div>';
-  if((rec.annotations||[]).length){
-    h += '<div class="skfile-sec"><b>🏷 对话标注（' + rec.annotations.length + ' 条）：</b></div>';
-    rec.annotations.slice(-12).forEach(function(a){
-      h += '<div class="sf-ann">R' + a.r + ' <span class="sf-tag">[' + escT(a.tag||'') + ']</span> 反贼「' + escT(String(a.text||'').slice(0,28)) + '」' + (a.note ? ' — ' + escT(a.note.slice(0,40)) : '') + '</div>';
-    });
-  }
-  if((rec.history||[]).length){
-    h += '<div class="skfile-sec"><b>🕘 版本历史：</b> ' + rec.history.slice(-6).map(function(x){ return '<span class="sf-ver">v' + x.v + '</span>(' + escT(x.tag||'') + ')'; }).join(' → ') + '</div>';
-  }
-  body.innerHTML = h;
-  const ni = $('skNoteInput'); if(ni && rec.note && !ni.value) ni.value = rec.note;
-}
 function renderFbTrainCard(stage, skill){
   const card = $('fbTrainCard'); if(!card) return;
   const fb = G.sandbox.feedback;
@@ -2810,11 +2621,6 @@ function revealDistill(skill){
   renderFbTrainCard('done', skill);
   $('distillPanel').classList.add('show');
   G.sandbox.lastSkill = skill;
-  // ★ 蒸馏产出写入 skill 文件（持久化，含版本历史）
-  const rec = upsertSkillToFile(skill, '沙箱蒸馏沉淀');
-  annals('📁 已写入 skill 文件：〔' + rec.key + '〕v' + rec.version + ' —— 路径、力度、版本历史已存档；可为对话打标注、为技能写批注。', 'gold');
-  renderSkillFilePanel();
-  const st = $('skNoteStatus'); if(st) st.textContent = '';
   renderHud();
 }
 
@@ -3017,12 +2823,6 @@ $('toStep2Btn').onclick = function(){
 /* =====================================================
    第二步：控制
 ===================================================== */
-$('skNoteSave').onclick = function(){
-  const note = $('skNoteInput').value.trim();
-  const rec = noteSkillToFile(note);
-  $('skNoteStatus').textContent = rec ? '✓ 已写入 skill 文件（下次对练前自动读取）' : '请先完成一轮对练沉淀技能';
-  if(rec){ annals('✎ 技能批注已写入 skill 文件：' + note.slice(0,50), 'gold'); renderSkillFilePanel(); }
-};
 $('runBtn').onclick = function(){ runSandbox(); };
 
 /* =====================================================
@@ -3059,7 +2859,7 @@ $('loadSkillBtn').onclick = function(){
 async function sendMessage(text){
   text = (text||'').trim();
   if(!text || G.busy) return;
-  if(isAgreement(text, { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: offerStatedInChat() })){
+  if(isAgreement(text)){
     if(G.dealClosed){
       addMsg('agent', RE_CONFIRM_VARIANTS[G.round % RE_CONFIRM_VARIANTS.length]);
       return;
@@ -3134,7 +2934,6 @@ $('fbSubmit').onclick = async function(){
   $('scInfo').textContent = '🧠 正在基于第三步反馈重训技能…';
   const trained = await retrainFromFeedback(G.sandbox.feedback, G.chatTranscript, baseSkill);
   G.pendingSkill = trained;
-  upsertSkillToFile(trained, '第三步反馈重训');
   renderFbTrainCard('training', trained);
   annals('🧠 已基于第三步反馈' + (trained.source==='llm'?'由大模型':'由规则引擎') + '重训技能：〔' + trained.name + '〕——' + trained.fbNote, 'gold');
   addMsg('sys', '🧠 反馈已转化为技能调整：' + trained.fbNote + '。即将回到第二步，把新技能放进沙箱重新对练、验证通过后再沉淀。', 'gold');
@@ -3204,143 +3003,6 @@ function deepMerge(base, over){
     } else { base[k] = over[k]; }
   }
   return base;
-}
-/* =====================================================
-   Skill 文件（技能档案）持久化
-   —— 一份可读写、可迭代的 skill 文件，包含：技能本体 + 对话标注 + 技能批注 + 版本历史。
-   第三步反馈与第二步标注都写回这里；再次对练前先读回，据此更新 skill 再开练。
-   ===================================================== */
-const SKILL_FILE_KEY = 'sgg_skillfile_v1';
-function blankSkillFile(){
-  return { version:1, updatedAt:Date.now(), activeId:null, skills:[], annotations:[], skillNote:'', history:[] };
-}
-function loadSkillFile(){
-  try{
-    const raw = localStorage.getItem(SKILL_FILE_KEY);
-    if(raw){ const f = JSON.parse(raw); if(f && Array.isArray(f.skills)){ G.skillStore = f; return f; } }
-  }catch(e){}
-  G.skillStore = blankSkillFile();
-  return G.skillStore;
-}
-function saveSkillFile(){
-  if(!G.skillStore) G.skillStore = blankSkillFile();
-  G.skillStore.updatedAt = Date.now();
-  try{ localStorage.setItem(SKILL_FILE_KEY, JSON.stringify(G.skillStore)); }catch(e){}
-  return G.skillStore;
-}
-/* 把蒸馏/重训产出的技能写入 skill 文件（同名升版本，保留标注与批注） */
-function upsertSkillToFile(skill, tag){
-  const f = G.skillStore || loadSkillFile();
-  const key = skill.key || String(skill.name || '').replace(/\s*v\d+$/,'');
-  let rec = f.skills.find(function(x){ return x.key === key; });
-  if(!rec){
-    rec = { key:key, name:skill.name, version:0, pathDesc:'', desc:'', power:0, cost:0, fbNote:'',
-            annotations:[], note:'', history:[] };
-    f.skills.push(rec);
-  }
-  rec.name = skill.name;
-  rec.version = skill.version || (rec.version + 1);
-  rec.patternId = skill.patternId; rec.matchType = skill.matchType;
-  rec.pathDesc = skill.pathDesc || rec.pathDesc;
-  rec.desc = skill.desc || rec.desc;
-  rec.power = skill.power || rec.power; rec.cost = (skill.cost != null ? skill.cost : rec.cost);
-  rec.fbNote = skill.fbNote || rec.fbNote;
-  rec.useCases = skill.useCases || rec.useCases;
-  rec.active = true;
-  f.activeId = key;
-  rec.history.push({ v:rec.version, at:Date.now(), tag:tag || '蒸馏沉淀', pathDesc:rec.pathDesc, power:rec.power, cost:rec.cost });
-  if(rec.history.length > 12) rec.history.shift();
-  saveSkillFile();
-  return rec;
-}
-/* 对话标注写入 skill 文件的当前技能 */
-function annotateToFile(entry){
-  const f = G.skillStore || loadSkillFile();
-  let rec = f.skills.find(function(x){ return x.key === f.activeId; });
-  if(!rec && f.skills.length) rec = f.skills[f.skills.length-1];
-  if(!rec){ rec = { key:'未命名技能', name:'未命名技能', version:1, pathDesc:'', desc:'', power:0, cost:0, fbNote:'', annotations:[], note:'', history:[] }; f.skills.push(rec); f.activeId = rec.key; }
-  entry.at = Date.now();
-  rec.annotations.push(entry);
-  if(rec.annotations.length > 100) rec.annotations.shift();
-  saveSkillFile();
-  return rec;
-}
-function noteSkillToFile(note){
-  const f = G.skillStore || loadSkillFile();
-  let rec = f.skills.find(function(x){ return x.key === f.activeId; });
-  if(!rec && f.skills.length) rec = f.skills[f.skills.length-1];
-  if(!rec) return null;
-  rec.note = String(note || '');
-  saveSkillFile();
-  return rec;
-}
-function activeSkillRecord(){
-  const f = G.skillStore || loadSkillFile();
-  return f.skills.find(function(x){ return x.key === f.activeId; }) || (f.skills.length ? f.skills[f.skills.length-1] : null);
-}
-/* 标注 tag → 训练信号（把人的判断翻译成可执行调整） */
-const ANNOT_TAG_SIGNALS = {
-  '金额不明': { key:'askAmount', desc:'问金额时正面给确定数字' },
-  '答非所问': { key:'relevance', desc:'每条回复先接住用户本轮提问' },
-  '误判成交': { key:'strictDeal', desc:'未明确同意前不得收尾/宣布达成一致' },
-  '绕弯拖延': { key:'earlyOffer', desc:'实质方案前置，减少来回' },
-  '话术生硬': { key:'empathize', desc:'共情表达更自然' },
-  '机制外露': { key:'noMech', desc:'禁止暴露技能/成本/阶段等内部词' },
-  '表达啰嗦': { key:'concise', desc:'表达精简' },
-};
-/* 再次对练前：读取 skill 文件的标注 + 批注，更新技能本体，返回变更摘要 */
-function applySkillFileBeforeSandbox(){
-  const rec = activeSkillRecord();
-  if(!rec) return null;
-  const f = G.skillStore;
-  const anns = rec.annotations || [];
-  const note = rec.note || '';
-  if(!anns.length && !note.trim()) return null;
-  // 统计高频标注 tag
-  const tally = {};
-  anns.forEach(function(a){ if(a.tag) tally[a.tag] = (tally[a.tag]||0)+1; });
-  const top = Object.keys(tally).sort(function(a,b){ return tally[b]-tally[a]; });
-  const sigKeys = [];
-  top.forEach(function(tg){ const sg = ANNOT_TAG_SIGNALS[tg]; if(sg && sigKeys.indexOf(sg.desc)<0) sigKeys.push(sg.desc); });
-  // 批注文本解析为信号（复用反馈信号解析器）
-  let noteSig = parseFeedbackSignals({ lang:note, progress:note, strategy:note });
-  applySignalSummary(noteSig).forEach(function(x){ if(sigKeys.indexOf(x)<0) sigKeys.push(x); });
-  if(!sigKeys.length) sigKeys.push('依据标注与批注做针对性增强');
-  // 更新技能：路径前置新信号、力度微调、版本+1
-  const ver = (G.skillVersions[rec.key] = (G.skillVersions[rec.key] || rec.version || 0) + 1);
-  const prefix = '按标注/批注再训练（' + sigKeys.slice(0,4).join('、') + '）';
-  rec.pathDesc = prefix + ' → ' + String(rec.pathDesc || '').replace(/^按标注\/批注再训练（[^）]*）\s*→\s*/,'');
-  rec.power = Math.min(48, (rec.power || 24) + (anns.length >= 3 ? 2 : 1));
-  rec.fbNote = '第 ' + ver + ' 版：读取 skill 文件中 ' + anns.length + ' 条对话标注（' + (top.slice(0,3).map(function(t){return t+'×'+tally[t];}).join('、') || '无') + '）与批注，更新路径与力度。';
-  rec.version = ver;
-  rec.name = rec.key + ' v' + ver;
-  rec.history.push({ v:ver, at:Date.now(), tag:'读标注/批注再训练', pathDesc:rec.pathDesc, power:rec.power, cost:rec.cost });
-  if(rec.history.length > 12) rec.history.shift();
-  f.activeId = rec.key;
-  saveSkillFile();
-  // 同步到内存技能池，供本轮对练使用
-  G.extraSkills = G.extraSkills.filter(function(x){ return x.key !== rec.key; });
-  G.extraSkills.push({ id:'x_'+rec.key+'_v'+ver, key:rec.key, name:rec.key, version:ver, cost:rec.cost, power:rec.power,
-    matchType:rec.matchType, patternId:rec.patternId, pathDesc:rec.pathDesc, fbNote:rec.fbNote, fromFeedback:true });
-  if(G.extraSkills.length > 4) G.extraSkills.shift();
-  G.skillStatus = freshSkillStatus();
-  // 把标注信号写入话术/决策层：标注 tag 直接映射为可执行信号
-  noteSig = noteSig || {};
-  noteSig.lang = noteSig.lang || {};
-  noteSig.progress = noteSig.progress || {};
-  noteSig.strategy = noteSig.strategy || {};
-  noteSig.close = noteSig.close || {};
-  const has = function(k){ return top.indexOf(k) >= 0; };
-  if(has('金额不明')) noteSig.replyAskAmount = true;
-  if(has('答非所问')) noteSig.lang.empathize = true;
-  if(has('误判成交')) noteSig.close.strictDeal = true;
-  if(has('绕弯拖延')) noteSig.progress.earlyOffer = true;
-  if(has('话术生硬')) noteSig.lang.empathize = true;
-  if(has('表达啰嗦')) noteSig.lang.concise = true;
-  if(has('机制外露')) noteSig.noMech = true;
-  G.fbSignals = noteSig;
-  G.annotationSignals = sigKeys;
-  return { rec:rec, annCount:anns.length, note:note, signals:sigKeys, tally:tally };
 }
 /* 配置持久化：localStorage 保存/恢复（全局重置与页面刷新后配置保留） */
 function saveCfg(){
@@ -3552,22 +3214,7 @@ function cfgDiffNames(){
 function isInitialState(){ return !hasWorkData() && !cfgDeviates(); }
 // 启动时恢复持久化配置（全局重置/刷新后配置保留）
 loadCfg();
-loadSkillFile();
-// 从 skill 文件恢复已沉淀技能到内存池（刷新后 skill 不丢失）
-(function restoreSkills(){
-  const f = G.skillStore;
-  if(!f || !f.skills.length) return;
-  f.skills.forEach(function(rec){
-    G.extraSkills.push({ id:'x_'+rec.key+'_v'+rec.version, key:rec.key, name:rec.key, version:rec.version,
-      cost:rec.cost, power:rec.power, matchType:rec.matchType, patternId:rec.patternId,
-      pathDesc:rec.pathDesc, fbNote:rec.fbNote, fromFeedback:true });
-    G.skillVersions[rec.key] = Math.max(G.skillVersions[rec.key]||0, rec.version);
-  });
-  if(G.extraSkills.length > 4) G.extraSkills.splice(0, G.extraSkills.length-4);
-  G.skillStatus = freshSkillStatus();
-})();
 bindCfg();
-renderSkillFilePanel();
 updatePersonaInfer();
 renderLive();
 
@@ -3604,8 +3251,6 @@ function hardResetInPlace(){
   const rf = document.getElementById('resetFlash');
   if(rf) rf.remove();
   try{ localStorage.removeItem('sgg_cfg_v1'); }catch(e){}
-  try{ localStorage.removeItem(SKILL_FILE_KEY); }catch(e){}
-  G.annotations = []; G.skillNote = '';
   // 若沙箱回合仍在跑，先止损（运行中的循环持有旧 sandbox 引用）
   if(G.sandbox.running && !G.sandbox.stop) G.sandbox.stop = { type:'cut', reason:'全局重置' };
   initState();               // 全新 G：工作数据 + 配置 全部回默认
@@ -3620,8 +3265,6 @@ function hardResetInPlace(){
   $('traceFold').classList.remove('open');
   $('traceToggle').querySelector('.tw').textContent = '\u25b8 点击展开';
   $('distillPanel').classList.remove('show');
-  if($('sfBody')) renderSkillFilePanel();
-  if($('skNoteInput')) $('skNoteInput').value = '';
   $('runBtn').disabled = false;
   $('runBtn').textContent = '\u25b6 开始对练';
   $('scInfo').textContent = '等待开始';
@@ -3649,7 +3292,6 @@ $('resetConfirm').onclick = function(){
   document.body.appendChild(rb);
   // ③ 清除持久化配置（工作数据随刷新丢失）
   try{ localStorage.removeItem('sgg_cfg_v1'); }catch(e){}
-  try{ localStorage.removeItem('sgg_skillfile_v1'); }catch(e){}
   // ④ 重新加载页面；若 2 秒后页面仍在（环境拦截了 reload）→ 页内完整重置兜底，绝不拼接 URL 导航
   setTimeout(function(){
     let reloaded = false;
