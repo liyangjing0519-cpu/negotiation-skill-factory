@@ -554,7 +554,7 @@ footer b{color:var(--dim);}
               </div>
               <div class="fb-actions">
                 <button class="pxbtn btn-hist" id="fbSubmit">提交反馈 → 回到沙箱再练</button>
-                <span class="fb-hint" id="fbActionHint">提交后：反馈与对话原文将自动回灌第一步场景队列，驱动技能版本迭代</span>
+                <span class="fb-hint" id="fbActionHint">提交后：对话原文 + 四角色思考 + 标注 + 批注 打包回灌第二步重训 skill，再回沙箱验证</span>
               </div>
             </div>
           </div>
@@ -1179,7 +1179,7 @@ function initState(){
     interventions:0, spyBudget:3, converged:false, celebrated:false,
     evidence:'neutral', harm:false, lastSkill:null, lastOfferSkill:null, dealClosed:false, lastAttackType:null, attackMemory:{}, lastRoundCost:0,
     scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
-    replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[],
+    replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[], fbCorpus:null,
     skillStore:null, annotations:[], skillNote:'', trainingDirectives:null,
     cfg: deepCopy(DEFAULT_CFG),
     pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
@@ -1662,22 +1662,63 @@ function ruleRetrainSkill(fb, baseSkill){
     source: 'rule',
   };
 }
-async function llmRetrainSkill(fb, transcript, baseSkill){
+/* =====================================================
+   统一训练语料包：把「对话原文 + 四角色思考前因后果 + 标注原文 + 批注原文」
+   打包成一份，交给第二步重训技能（真正形成更新后的 skill）。
+   ===================================================== */
+function collectTrainingCorpus(){
+  const clip = function(x, n){ return String(x == null ? '' : x).slice(0, n); };
+  // 体验阶段（source==='chat'）的回合才含四角色思考链
+  const traces = (G.sandbox.traces || []).filter(function(t){ return t.source === 'chat'; });
+  // ① 体验对话原文（双方）：用户原话 + 忠臣应答
+  const dialogue = traces.map(function(t){
+    return { round:t.r, user:clip(t.text, 240), loyal:clip(t.reply, 240) };
+  });
+  if(!dialogue.length && (G.chatTranscript || []).length){
+    G.chatTranscript.forEach(function(txt, i){ dialogue.push({ round:i+1, user:clip(txt, 240), loyal:'' }); });
+  }
+  // ② 四角色思考链（前因后果）：每回合 rebel/loyal/spy/hist 的内部推理
+  const reasoning = traces.map(function(t){
+    const lines = function(o){ return ((o && o.lines) || []).slice(-4).map(function(l){ return clip(l, 140); }); };
+    return { round:t.r, user:clip(t.text, 80),
+             rebel:lines(t.rebel), loyal:lines(t.loyal), spy:lines(t.spy), hist:lines(t.hist) };
+  });
+  // ③ 标注原文（skill 文件，全量累积）
+  const rec = activeSkillRecord();
+  const annotations = rec ? (rec.annotations || []).map(function(a){
+    return { round:a.r, tag:a.tag || '', note:clip(a.note, 200), user:clip(a.text, 160), loyal:clip(a.reply, 160) };
+  }) : [];
+  // ④ 批注原文（skill 文件，全量累积）
+  const rawNotes = rec ? (Array.isArray(rec.notes) ? rec.notes : (rec.note ? [{text:rec.note}] : [])) : [];
+  const notes = rawNotes.map(function(n){ return { at:n.at, text:clip(n.text, 320) }; });
+  return {
+    feedback: G.sandbox.feedback,
+    dialogue: dialogue.slice(-12),
+    reasoning: reasoning.slice(-8),
+    annotations: annotations,
+    notes: notes,
+    counts: { dialogue:dialogue.length, reasoning:reasoning.length, annotations:annotations.length, notes:notes.length }
+  };
+}
+
+async function llmRetrainSkill(fb, corpus, baseSkill){
   if(!llmEnabled()) return null;
   const system =
-    '你是赔付谈判技能训练师。根据第三步用户反馈，重新训练并生成一个升级版技能。\n' +
-    '只返回 JSON：{"name":"技能名(含版本号)","pathDesc":"用 → 连接的自然处理路径","desc":"技能说明","powerDelta":整数,"costDelta":整数,"fbNote":"本次依据反馈做了哪些具体调整","signalsApplied":["信号→如何落实",...]}。\n' +
-    'payload 里的「训练信号」已把反馈解析成结构化条目，必须逐条回应并写入 signalsApplied；不要出现技能库、机制、编号等内部词。';
+    '你是赔付谈判技能训练师。下面给你一份完整的「体验复盘语料包」，请据此重新训练并生成一个升级版技能。\n' +
+    '语料包含：①用户三方面反馈；②体验对话原文（用户与谈判专员逐句）；③四角色（反贼/忠臣/内奸/史官）每回合内部思考与前因后果；④用户对具体回合的标注原文；⑤用户写的技能批注原文。\n' +
+    '你必须逐条吸收标注与批注原文里的具体要求，写进 signalsApplied（每条格式「原文要点→如何落实到新技能」），并让 pathDesc 真实反映语料暴露的问题。\n' +
+    '只返回 JSON：{"name":"技能名(含版本号)","pathDesc":"用 → 连接的自然处理路径","desc":"技能说明","powerDelta":整数,"costDelta":整数,"fbNote":"本次依据全部语料做了哪些具体调整","signalsApplied":["原文要点→如何落实",...]}。\n' +
+    'payload 里的「训练信号」是反馈的结构化摘要；标注与批注原文是用户最真实的要求，优先级高于摘要。不要出现技能库、机制、编号等内部词。';
   const payload = {
     用户反馈: fb,
     训练信号: applySignalSummary(parseFeedbackSignals(fb)),
-    体验对话摘录: (transcript || []).slice(-10),
+    训练语料包: corpus,
     基线技能: baseSkill ? { name:baseSkill.name, pathDesc:baseSkill.pathDesc, matchType:baseSkill.matchType, patternId:baseSkill.patternId } : null,
   };
   const txt = await llmCall([
     { role:'system', content:system },
     { role:'user', content:JSON.stringify(payload) },
-  ], { temperature:0.7 });
+  ], { temperature:0.7, maxTokens:1100 });
   const j = parseJsonLoose(txt);
   if(!j || !j.pathDesc) return null;
   j.source = 'llm';
@@ -1687,8 +1728,11 @@ async function retrainFromFeedback(fb, transcript, baseSkill){
   const sig = parseFeedbackSignals(fb);
   G.fbSignals = sig;
   G.fbTrainingLog = [];
+  // ★ 统一语料包：对话原文 + 四角色思考前因后果 + 标注原文 + 批注原文
+  const corpus = collectTrainingCorpus();
+  G.fbCorpus = corpus;
   let r = null;
-  if(llmEnabled()) r = await llmRetrainSkill(fb, transcript, baseSkill);
+  if(llmEnabled()) r = await llmRetrainSkill(fb, corpus, baseSkill);
   if(!r) r = ruleRetrainSkill(fb, baseSkill);
   const prev = baseSkill || G.extraSkills[G.extraSkills.length-1] || null;
   const key = prev ? (prev.key || String(prev.name || '').replace(/\s*v\d+$/,'')) : '体验反馈·定向增强';
@@ -1709,6 +1753,7 @@ async function retrainFromFeedback(fb, transcript, baseSkill){
     useCases: (transcript || []).slice(-3),
     source: r.source || 'rule',
     signals: r.signals || applySignalSummary(sig),
+    corpusCounts: corpus.counts,
     fromFeedback: true,
   };
 }
@@ -2801,6 +2846,12 @@ function renderFbTrainCard(stage, skill){
   let html = '';
   html += '<div>① <b>原始反馈</b>：' + escT(raw) + '</div>';
   html += '<div>② <b>解析信号</b>：' + (applied.length ? applied.map(escT).join(' ｜ ') : '无具体建议') + '</div>';
+  const cp = G.fbCorpus;
+  if(cp && cp.counts){
+    html += '<div style="margin:5px 0;padding:5px 7px;border-left:3px solid var(--hist);background:rgba(70,200,176,.07)">'
+         + '🧠 <b>投喂第二步的统一语料包</b>：对话原文 ' + cp.counts.dialogue + ' 轮（含双方应答） ｜ 四角色思考链 ' + cp.counts.reasoning
+         + ' 组 ｜ 标注原文 ' + cp.counts.annotations + ' 条 ｜ 批注原文 ' + cp.counts.notes + ' 条</div>';
+  }
   if(stage === 'done' && skill){
     html += '<div>③ <b>技能调整</b>：路径=' + escT(String(skill.pathDesc || '').split(' → ').slice(0,4).join(' → '))
           + ' ｜ 力度 P' + skill.power + ' ｜ 成本 ' + fmtMoney(skill.cost) + '</div>';
@@ -3147,7 +3198,7 @@ $('fbSubmit').onclick = async function(){
   if(routes.length) annals('✒ 分路回灌：' + routes.join(' ｜ '), 'gold');
   addMsg('sys', '✒ 反馈已登记（' + (fbRating==='good'?'技能有效':'需要改进') + '）。' +
     (routes.length ? '回灌路由：' + routes.join('；') + '。' : '') +
-    '即将回到沙箱开启新一轮对练，蒸馏技能版本迭代。', 'hist');
+    '即将把「对话原文 + 四角色思考 + 标注 + 批注」打包回灌第二步重训 skill，再回沙箱开练。', 'hist');
   if(G.chatTranscript.length){
     G.scenarios.push({ text:G.chatTranscript.join('\n'), source:'feedback' });
     annals('✒ 对话原文已回灌为新一轮场景（' + G.chatTranscript.length + ' 轮）', 'gold');
@@ -3160,6 +3211,11 @@ $('fbSubmit').onclick = async function(){
   upsertSkillToFile(trained, '第三步反馈重训');
   renderFbTrainCard('training', trained);
   annals('🧠 已基于第三步反馈' + (trained.source==='llm'?'由大模型':'由规则引擎') + '重训技能：〔' + trained.name + '〕——' + trained.fbNote, 'gold');
+  if(G.fbCorpus && G.fbCorpus.counts){
+    const cc = G.fbCorpus.counts;
+    annals('📦 投喂第二步的统一语料包：对话原文 ' + cc.dialogue + ' 轮（用户+忠臣双方） ｜ 四角色思考前因后果 ' + cc.reasoning
+      + ' 组 ｜ 标注原文 ' + cc.annotations + ' 条 ｜ 批注原文 ' + cc.notes + ' 条 → 据此生成新 skill，再进沙箱验证。', 'hist');
+  }
   addMsg('sys', '🧠 反馈已转化为技能调整：' + trained.fbNote + '。即将回到第二步，把新技能放进沙箱重新对练、验证通过后再沉淀。', 'gold');
   fbRating = null;
   fbPending = true;
@@ -3167,7 +3223,7 @@ $('fbSubmit').onclick = async function(){
   this.textContent = '⏳ 已入队，等待沙箱开练…';
   $('fbGood').classList.remove('sel-good'); $('fbBad').classList.remove('sel-bad');
   $('fbFields').classList.remove('show');
-  $('fbActionHint').textContent = '提交后：反馈与对话原文将自动回灌第一步场景队列，驱动技能版本迭代';
+  $('fbActionHint').textContent = '提交后：对话原文 + 四角色思考 + 标注 + 批注 打包回灌第二步重训 skill，再回沙箱验证';
   $('fbLang').value = ''; $('fbProgress').value = ''; $('fbStrategy').value = '';
   renderQueue();
   switchView(2);
@@ -3181,7 +3237,7 @@ $('fbSubmit').onclick = async function(){
     fbPending = false;
     const btn = $('fbSubmit');
     btn.disabled = false;
-    btn.textContent = '提交反馈 → 回到沙箱再练（三方面分路回灌）';
+    btn.textContent = '提交反馈 → 回灌第二步重训 skill → 再练';
     runSandbox();
   };
   $('scInfo').textContent = G.busy ? '⏳ 等待当前回合结束，即将自动开练…' : '⏳ 即将开始新一轮对练…';
