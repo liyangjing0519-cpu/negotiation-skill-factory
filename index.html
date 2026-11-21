@@ -722,6 +722,12 @@ footer b{color:var(--dim);}
 
         <div class="cfg-page" id="cfgPage-sys">
           <div class="cfg-sec">
+            <div class="cs-title">🚪 成交收尾判定（可训练 + 语义复核）</div>
+            <div class="cs-note">收尾严格度与自定义确认词由第二步标注/批注/第三步反馈自动学习（如标注「漏判成交」→放宽、「误判成交」→收紧，批注里出现「行了吧/妥了」→加入确认词）。开启语义复核后，规则未判成交时交由大模型结合最近对话判断用户是否明确同意；未启用/失败自动回退规则。</div>
+            <div class="cfg-row"><label>语义复核(LLM)</label><select data-cfg="exp.closePolicy.llmJudge"><option value="false">关闭（仅规则判定，默认）</option><option value="true">开启（规则未判时交 LLM 复核）</option></select></div>
+            <div class="cfg-row"><label>收尾基线严格度</label><select data-cfg="exp.closePolicy.baseStrictness"><option value="normal">标准（默认）</option><option value="strict">严格</option><option value="loose">宽松</option></select></div>
+          </div>
+          <div class="cfg-sec">
             <div class="cs-title">🔄 数据回流策略</div>
             <div class="cfg-row"><label>回流模式</label><select data-cfg="sys.feedbackLoop"><option value="manual">仅人工反馈触发（默认，可控）</option><option value="auto">每轮谈判结束自动回灌沙箱</option></select></div>
           </div>
@@ -1055,6 +1061,7 @@ const DEFAULT_CFG = {
   },
   exp: {
     style: 'professional', pace: 'steady', dualRun: true,
+    closePolicy: { llmJudge:false, baseStrictness:'normal' },
     humanHandoff: { predFloor: 40, lowPredRounds: 2, amountLimit: 50000,
       redlines: ['人身损害', '食品安全', '疑似欺诈', '涉未成年人', '大V舆情'] },
   },
@@ -1181,6 +1188,7 @@ function initState(){
     scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
     replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[], fbCorpus:null,
     skillStore:null, annotations:[], skillNote:'', trainingDirectives:null,
+    closePolicy:{ strictness:'normal', extraConfirms:[], requireOffer:true },
     cfg: deepCopy(DEFAULT_CFG),
     pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
     belowTargetStreak: 0, forceUpgrade: false, currentTarget: 85, v2pred: 30, redlineFlagged: {},
@@ -1194,6 +1202,8 @@ function resetBattle(){
   G.round=0; G.spent=0; G.resolution=30; G.pressure=15; G.equilibrium=0;
   G.stableRounds=0; G.converged=false; G.celebrated=false; G.interventions=0;
   G.skillStatus=freshSkillStatus(); G.lastSkill=null; G.history=[]; G.attackMemory={};
+  // 收尾策略在 resetBattle 时保留（跨对练累积学习），仅重置严格度到配置基线
+  if(G.closePolicy){ G.closePolicy.strictness = ((G.cfg.exp||{}).closePolicy||{}).baseStrictness || 'normal'; }
   G.evidence='neutral'; G.harm=false; G.lastRoundCost=0; G.scenarioLabel='待机';
   G.dealClosed=false; G.lastOfferSkill=null;
   G.replyHistory={}; G.recentReplies=[];
@@ -1222,27 +1232,96 @@ const ATTACK_TYPES = { '情理攻势':10, '合规威胁':16, '舆论威胁':15, 
 const EV_STRONG = /视频|录音|截图|照片|发票|底单|单据|票据|报告|鉴定|认定书|判例|检测|合同|监控|录屏|工单号|SLA|保价|医院|就医|住院|诊断|骨折|送医|过敏|皮炎|肠胃炎|心悸|副作用|吃出|异物|蟑螂|头发|塑料片|划破|食品安全法|消法|民法典|碎了|破损|磕|划痕|漏液|跑酒|化冻|变质|鼓包|色差|钻绒|不制冷|故障|维权群|政采|代位|消防|信访|消协|留样|医药费|误工费/;
 const EV_WEAK = /空包裹|调包|二手|穿过|吊牌|精神损失|心理创伤|通融|体面|清净|删差评|差评删|十个号|说了算|别管发票|挂二手|毁了我的人生/;
 const HARM_RE = /住院|医院|骨折|医药费|就医|诊断|中毒|过敏|皮炎|划破|送医|副作用|心悸|肠胃炎|受伤/;
-/* 共识达成检测（严格版）：
-   必须同时满足——① 无疑问/否定/条件/追问词；② 纯确认短句（不含金额、诉求、新议题）；
-   ③ 上下文已有明确在谈方案且已向用户报出；④ 通过了 LLM 语义复核（若启用）。
-   任何一条不满足都不判成交，避免"用户还在问金额就被宣布达成一致"。 */
+/* 共识达成检测（可训练版）：
+   方案1 口语归一：叠词/语气词/标点归一，覆盖「行了/行吧/好的/没问题/那就这么定了」等高频口语。
+   方案2 可训练：判定阈值与自定义确认词来自 G.closePolicy（由标注/批注/反馈学习得到）。
+   方案3 语义复核见 judgeAgreementByLLM / decideAgreement（体验阶段异步调用）。
+   上下文校验：除非 requireOffer=false，否则须已向用户报出明确方案。 */
+function normConfirm(t){
+  let s = String(t == null ? '' : t).toLowerCase();
+  // 去标点/空白（含问号），不删中文字符
+  s = s.replace(/[。！!，,~～\s.、；;：:…"'「」『』?？]/g, '');
+  // 叠词归一：嗯嗯→嗯、好好→好、行行→行、可以可以→可以、okok→ok
+  s = s.replace(/(嗯){2,}/g,'嗯').replace(/(好){2,}/g,'好').replace(/(行){2,}/g,'行').replace(/(可以){2,}/g,'可以').replace(/(ok){2,}/g,'ok');
+  // 句尾语气词：行吧→行、好吧→好、行啊→行
+  s = s.replace(/(吧|啊|呀|呢|嘛|哦|噢|啦|咯|哈|呗|喽)+$/g,'');
+  return s;
+}
+function closePolicyNow(){
+  return G.closePolicy || (G.closePolicy = { strictness:'normal', extraConfirms:[], requireOffer:true });
+}
 function isAgreement(text, ctx){
-  const t = String(text || '').trim();
-  if(!t || t.length > 18) return false;
-  // 阻断：疑问 / 追问 / 否定 / 条件 / 转折 / 新诉求
-  if(/[?？]|吗|呢|吧$|多少|几块|几万|怎么|为什么|凭什么|能不能|可不可以|行不行|是不是/.test(t)) return false;
-  if(/不|没|别|再|还|但|不过|然而|除非|另外|还是|如果|要是|先|回头|考虑|想想/.test(t)) return false;
-  if(/赔|补偿|退款|万|元|块|钱|券|方案|条件|凭证|证据|举证|发我|看看|再说/.test(t)) return false;
-  const s = t.replace(/[。！!，,~～\s.]/g, '');
-  // 纯确认短句白名单（整句就是一个确认，而非确认+其他内容）
-  const pure = /^(可以|行|好|嗯|ok|同意|接受|成交|没问题|就这样|准了|认了|定了|可以了|成交吧|就按这个|按这个办|我同意|我接受|那就这样|就这么办|行吧)$/i;
-  if(!pure.test(s)) return false;
-  // 上下文校验：必须已向用户报出过明确方案
-  if(ctx && ctx.requireOffer !== false){
+  const raw = String(text || '').trim();
+  if(!raw || raw.length > 30) return false;
+  const pol = closePolicyNow();
+  const n = normConfirm(raw);
+  if(!n) return false;
+  // 内置确认词（归一后形态，精确整句匹配；任何多字/疑问/诉求句都不会命中，天然阻断）
+  const BASE = ['行','行了','好','好的','可以','可以了','嗯','ok','同意','我同意','接受','我接受',
+    '成交','没问题','没毛病','就这样','就按这个','按这个办','准了','认了','定了','成交了','成了',
+    '那就这样','就这么办','就这么定了','那就这么定了','那就定了','好的可以','行就按这个','妥了'];
+  let hit = BASE.indexOf(n) >= 0;
+  // 可训练自定义确认词（来自标注/批注/反馈学习）
+  if(!hit) hit = (pol.extraConfirms || []).some(function(w){ const wn = normConfirm(w); return wn && n === wn; });
+  // 严格度：strict 禁用自定义词；loose 放宽上下文 offerInChat
+  if(pol.strictness === 'strict'){
+    hit = BASE.indexOf(n) >= 0;
+  }
+  if(!hit) return false;
+  // 上下文校验：须已向用户报出明确方案（loose 仅要求 hasOffer）
+  if(ctx && ctx.requireOffer !== false && pol.requireOffer !== false){
     if(!ctx.hasOffer) return false;
-    if(!ctx.offerInChat) return false;
+    if(pol.strictness !== 'loose' && ctx.offerInChat === false) return false;
   }
   return true;
+}
+/* =====================================================
+   方案3：成交判定 → LLM 语义复核（体验阶段异步调用）
+   规则白名单为准入与兜底；规则未判成交时，若开启 llmJudge 且有密钥，
+   把「用户原话 + 最近 agent 回复」交给模型判断是否明确、无条件同意。
+   未启用/调用失败 → 回退规则结果，流程不中断。
+   ===================================================== */
+function recentAgentLines(n){
+  try{
+    const bs = Array.from(document.querySelectorAll('#chatLog .msg.agent .bubble'))
+      .map(function(b){ return (b.innerText || b.textContent || '').trim(); }).filter(Boolean);
+    return bs.slice(-(n || 3));
+  }catch(e){ return []; }
+}
+async function llmJudgeAgreement(text, ctx){
+  const cp = (G.cfg.exp && G.cfg.exp.closePolicy) || {};
+  if(cp.llmJudge !== true && cp.llmJudge !== 'true') return null;   // 开关未开
+  if(!llmEnabled()) return null;                                     // 无密钥
+  const system =
+    '你是谈判收尾判定器。判断用户这句话是否在【明确、无条件地同意当前赔付方案、可以结束谈判】。\n' +
+    '只返回 JSON：{"agree":true或false,"reason":"一句话理由"}。\n' +
+    '判定标准：①「好/行/可以/行了/行吧/没问题/就这么定了/那就这么办/我同意/成交吧」等纯肯定算同意；' +
+    '②仍在质疑、追问金额、附加条件、提出新诉求、说"再考虑/再说/不行/不对"的不算；' +
+    '③上下文中谈判专员必须先给出过明确方案，否则不算。';
+  const payload = {
+    用户原话: text,
+    最近专员回复: recentAgentLines(3),
+    是否已报出方案: !!(ctx && ctx.hasOffer),
+    收尾严格度: closePolicyNow().strictness,
+  };
+  const txt = await llmCall([
+    { role:'system', content:system },
+    { role:'user', content:JSON.stringify(payload) },
+  ], { temperature:0, maxTokens:120 });
+  const j = parseJsonLoose(txt);
+  if(!j || typeof j.agree !== 'boolean') return null;
+  return j;
+}
+/* 体验阶段统一入口：规则优先，规则未过时交 LLM 复核；返回 {yes, by} */
+async function decideAgreement(text, ctx){
+  const byRule = isAgreement(text, ctx);
+  if(byRule) return { yes:true, by:'rule' };
+  const j = await llmJudgeAgreement(text, ctx);
+  if(j && j.agree === true){
+    // 语义复核判定成交：仍需"已报方案"这一硬门槛（避免没报价就收尾）
+    if(!ctx || ctx.hasOffer !== false) return { yes:true, by:'llm', reason:j.reason };
+  }
+  return { yes:false, by:'rule' };
 }
 /* 判断"是否已向用户报出明确方案"：最近一轮 agent 回复是否含实质承诺（金额/时效/专家/举证结论） */
 function offerStatedInChat(){
@@ -1582,6 +1661,34 @@ async function decideTurn(trigger, info, effGain){
   return { skill:skill, reply:'', source:'rule' };
 }
 /* =====================================================
+   方案2：收尾判定 → 可训练活信号
+   把标注 tag / 批注原文 / 体验反馈，学习成 G.closePolicy：
+     - 自定义确认词（用户口语，如「行了/妥了/那就这么定了」）
+     - 严格度 strict / normal / loose（是否放宽上下文、是否禁用自定义词）
+   ===================================================== */
+const CLOSE_WORD_RE = /(行了吧|行吧|行了|好的吧|好吧|好的|好嘞|没问题|没毛病|可以了|妥了|成交吧|就这么定了|那就这么定了|那就定了|就这么办|就按这个|我同意|我接受|确认了)/g;
+function learnClosePolicy(tags, texts, fb){
+  const pol = closePolicyNow();
+  tags = tags || [];
+  const text = [].concat(texts || []).filter(Boolean).join(' ');
+  // 1) 学习自定义确认词（累积、去重、上限）
+  const found = text.match(CLOSE_WORD_RE) || [];
+  found.forEach(function(w){
+    if(pol.extraConfirms.indexOf(w) < 0 && pol.extraConfirms.length < 40) pol.extraConfirms.push(w);
+  });
+  // 2) 严格度：反向标注「漏判成交」/反馈「该收尾却没结束」→ 放宽；「误判成交」→ 收紧
+  const looseByTag = tags.indexOf('漏判成交') >= 0 || tags.indexOf('该收不收') >= 0;
+  const fbLoose = fb && (/该收|没结束|不收尾|说了行|说了可以|还在问|反复问|别再问|重复询问|满意了还/.test(
+    [fb.lang, fb.progress, fb.strategy].filter(Boolean).join(' ')) || fb.closeIssue);
+  const strictByTag = tags.indexOf('误判成交') >= 0;
+  if(strictByTag) pol.strictness = 'strict';
+  else if(looseByTag || fbLoose) pol.strictness = 'loose';
+  // 3) 反馈里明确要求「先报方案再收尾」→ 保持 requireOffer；要求「别磨叽直接定」→ 放宽
+  if(fb && /直接定|别磨叽|爽快|一步到位/.test([fb.progress, fb.strategy].filter(Boolean).join(' '))) pol.requireOffer = false;
+  return pol;
+}
+
+/* =====================================================
    反馈 → 结构化训练信号
    把自然语言建议解析成可执行信号，真正注入话术层与决策层。
    ===================================================== */
@@ -1731,6 +1838,8 @@ async function retrainFromFeedback(fb, transcript, baseSkill){
   // ★ 统一语料包：对话原文 + 四角色思考前因后果 + 标注原文 + 批注原文
   const corpus = collectTrainingCorpus();
   G.fbCorpus = corpus;
+  // ★ 方案2：体验反馈 → 收尾判定活信号
+  learnClosePolicy([], [fb && fb.lang, fb && fb.progress, fb && fb.strategy].concat((corpus.notes||[]).map(function(x){return x.text;})), fb);
   let r = null;
   if(llmEnabled()) r = await llmRetrainSkill(fb, corpus, baseSkill);
   if(!r) r = ruleRetrainSkill(fb, baseSkill);
@@ -3133,7 +3242,9 @@ $('loadSkillBtn').onclick = function(){
 async function sendMessage(text){
   text = (text||'').trim();
   if(!text || G.busy) return;
-  if(isAgreement(text, { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: offerStatedInChat() })){
+  const verdict = await decideAgreement(text, { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: offerStatedInChat() });
+  if(verdict.yes){
+    if(verdict.by === 'llm') addMsg('sys', '🤖 语义复核判定：用户已明确同意 → 进入收尾确认', 'hist');
     if(G.dealClosed){
       addMsg('agent', RE_CONFIRM_VARIANTS[G.round % RE_CONFIRM_VARIANTS.length]);
       return;
@@ -3368,6 +3479,8 @@ const ANNOT_TAG_SIGNALS = {
   '金额不明': { key:'askAmount', desc:'问金额时正面给确定数字' },
   '答非所问': { key:'relevance', desc:'每条回复先接住用户本轮提问' },
   '误判成交': { key:'strictDeal', desc:'未明确同意前不得收尾/宣布达成一致' },
+  '漏判成交': { key:'looseClose', desc:'用户已明确同意却没进收尾，应果断结束' },
+  '该收不收': { key:'looseClose', desc:'该收尾时仍在报价/追问，应停止并收尾' },
   '绕弯拖延': { key:'earlyOffer', desc:'实质方案前置，减少来回' },
   '话术生硬': { key:'empathize', desc:'共情表达更自然' },
   '机制外露': { key:'noMech', desc:'禁止暴露技能/成本/阶段等内部词' },
@@ -3448,6 +3561,8 @@ function applySkillFileBeforeSandbox(){
   if(has('金额不明')) noteSig.replyAskAmount = true;
   if(has('答非所问')) noteSig.lang.empathize = true;
   if(has('误判成交')) noteSig.close.strictDeal = true;
+  // ★ 方案2：标注/批注 → 收尾判定活信号（自定义词 + 严格度）
+  learnClosePolicy(top, [noteText].concat(anns.map(function(a){ return a.note || ''; })), null);
   if(has('绕弯拖延')) noteSig.progress.earlyOffer = true;
   if(has('话术生硬')) noteSig.lang.empathize = true;
   if(has('表达啰嗦')) noteSig.lang.concise = true;
