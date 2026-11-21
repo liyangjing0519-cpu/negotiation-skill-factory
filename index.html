@@ -1319,16 +1319,32 @@ async function decideAgreement(text, ctx){
   const j = await llmJudgeAgreement(text, ctx);
   if(j && j.agree === true){
     // 语义复核判定成交：仍需"已报方案"这一硬门槛（避免没报价就收尾）
-    if(!ctx || ctx.hasOffer !== false) return { yes:true, by:'llm', reason:j.reason };
+    // LLM 已结合「是否已报方案」做语义判断，不再因 hasOffer=false 丢弃；仅当明确无方案且无对话证据时兜底
+    if(!ctx || ctx.hasOffer !== false || offerStatedInChat()) return { yes:true, by:'llm', reason:j.reason };
   }
   return { yes:false, by:'rule' };
 }
 /* 判断"是否已向用户报出明确方案"：最近一轮 agent 回复是否含实质承诺（金额/时效/专家/举证结论） */
+/* 统一「是否已向用户报出方案」判定：
+   不再依赖 lastOfferSkill（它在 comfort/close 时为 null，导致说「行」被误卡）。
+   以对话气泡里是否出现实质承诺为准；沙箱剧本再叠加 lastOfferSkill 兜底。 */
+function hasOfferInChat(){
+  try{ return offerStatedInChat() || (!!G.lastOfferSkill && G.round > 0); }
+  catch(e){ return !!(G.lastOfferSkill && G.round > 0); }
+}
 function offerStatedInChat(){
   const bubbles = Array.from(document.querySelectorAll('#chatLog .msg.agent .bubble'))
     .map(function(b){ return b.innerText || ''; });
   const recent = bubbles.slice(-3).join(' ');
-  return /[¥￥]\s*[\d,]{3,}|\d+\s*万|全额|赔付|补偿|权益券|专家通道|24\s*小时|T\+1|到账|提交审批|加急/.test(recent);
+  // 只认「实质承诺」：金额/到账/全额/权益券/专家通道/时效/加急等。
+  // 排除「赔付专员/补偿专员」这类角色自称（裸「赔付|补偿」会误命中开场白）。
+  const PROMISE = /[¥￥]\s*[\d,]{2,}|\d+\s*(万|千|块|元)|全额|全额赔|补偿金|权益券|专家通道|24\s*小时|2\s*小时|T\+1|今天到账|即时到账|随时到账|已发放|提交审批|加急|专属方案|最终方案|赔付方案|给您赔|给您补|给您退/;
+  const ROLE_ONLY = /^[^。]*?(赔付|补偿|谈判)专员[^。]*$/;
+  if(PROMISE.test(recent)) return true;
+  // 若最近仅有一句纯粹的角色自我介绍（无实质承诺），判为未报方案
+  const lines = recent.split(/\s+/).filter(Boolean);
+  if(lines.length === 1 && ROLE_ONLY.test(lines[0])) return false;
+  return /赔付|补偿/.test(recent) && /[0-9¥￥]|到账|发放|方案/.test(recent);
 }
 const CLOSE_VARIANTS = [
   function(terms){ return '好的，方案确认：' + terms + '。马上为您走流程，有任何进展第一时间同步您——感谢您的耐心沟通，本次谈判到此收尾。'; },
@@ -2797,7 +2813,7 @@ async function runSandbox(){
       lastMark = mark;
     }
     const scRef = (built.marks[i] >= 0) ? G.scenarios[built.marks[i]] : null;
-    if(isAgreement(built.turns[i], { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: true }) && G.lastOfferSkill && !G.busy){
+    if(isAgreement(built.turns[i], { hasOffer: hasOfferInChat(), offerInChat: true }) && hasOfferInChat() && !G.busy){
       await closeDeal({ source:'sandbox', text: built.turns[i] });
     } else {
       await runRound({ source:'sandbox', text: built.turns[i], scenario: scRef });
@@ -3242,14 +3258,15 @@ $('loadSkillBtn').onclick = function(){
 async function sendMessage(text){
   text = (text||'').trim();
   if(!text || G.busy) return;
-  const verdict = await decideAgreement(text, { hasOffer: !!G.lastOfferSkill && G.round > 0, offerInChat: offerStatedInChat() });
+  const verdict = await decideAgreement(text, { hasOffer: hasOfferInChat(), offerInChat: offerStatedInChat() });
   if(verdict.yes){
     if(verdict.by === 'llm') addMsg('sys', '🤖 语义复核判定：用户已明确同意 → 进入收尾确认', 'hist');
     if(G.dealClosed){
       addMsg('agent', RE_CONFIRM_VARIANTS[G.round % RE_CONFIRM_VARIANTS.length]);
       return;
     }
-    if(G.lastOfferSkill && G.round > 0){
+    // 已判定为确认成交：只要对话里报过方案即可收尾，不再依赖 lastOfferSkill 是否被某技能设置
+    if(hasOfferInChat() || G.round > 0){
       addMsg('user', text.replace(/</g,'&lt;'), '反贼解读：共识达成 → 触发收尾确认（停止报价）');
       await closeDeal({ source:'chat', text:text });
       return;
