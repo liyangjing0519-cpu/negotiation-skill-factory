@@ -1,0 +1,3230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国杀 · 赔付谈判技能工厂</title>
+<style>
+@font-face{font-family:'Zpix';src:url('./Zpix.woff2') format('woff2');font-display:swap;}
+:root{
+  --bg:#101321; --panel:#1a2033; --panel2:#141928; --panel3:#0f1320;
+  --line:#3a4468; --line2:#262e4a; --ink:#eaeffb; --dim:#8b95b8; --faint:#5c6588;
+  --loyal:#4f8cff; --loyal-d:#2a5cc8; --rebel:#ff5c8a; --rebel-d:#c23360;
+  --spy:#ff9a3d; --spy-d:#c96a15; --hist:#46c8b0; --hist-d:#1f7a68;
+  --gold:#ffd76e; --green:#4ade80; --red:#ff5c5c;
+  --px-font:'Zpix','Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 4px);
+  color:var(--ink); font-family:var(--px-font); font-size:14px; line-height:1.6;
+  padding:16px; min-height:100vh;
+}
+.wrap{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.panel{background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line),0 6px 0 rgba(0,0,0,.35);position:relative;}
+.panel-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:linear-gradient(180deg,#232b45,#1c2338);border-bottom:3px solid #0a0d18;box-shadow:inset 0 -2px 0 var(--line2);font-size:15px;}
+.panel-head .sub{color:var(--dim);font-size:12px;}
+.chip{display:inline-block;padding:1px 8px;font-size:12px;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);background:var(--panel2);color:var(--dim);}
+.chip.c-loyal{color:var(--loyal);box-shadow:inset 0 0 0 1px var(--loyal-d);}
+.chip.c-rebel{color:var(--rebel);box-shadow:inset 0 0 0 1px var(--rebel-d);}
+.chip.c-spy{color:var(--spy);box-shadow:inset 0 0 0 1px var(--spy-d);}
+.chip.c-hist{color:var(--hist);box-shadow:inset 0 0 0 1px var(--hist-d);}
+.chip.c-gold{color:var(--gold);box-shadow:inset 0 0 0 1px #8a6d1e;}
+
+/* ============ 顶栏 + 步骤条 ============ */
+header.panel{padding:0;}
+.header-inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 16px 6px;}
+.logo-seal{width:44px;height:44px;flex:0 0 auto;background:linear-gradient(180deg,#c23333,#8f1f1f);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px #ff7a6b55;display:flex;align-items:center;justify-content:center;color:#ffe9e0;font-size:16px;line-height:1.1;text-align:center;}
+.title-block h1{font-size:20px;letter-spacing:2px;color:var(--gold);text-shadow:2px 2px 0 #00000088;}
+.title-block h1 .accent{color:var(--ink);}
+.title-block p{color:var(--dim);font-size:12px;margin-top:2px;}
+.header-status{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.stat-chip{font-size:12px;padding:3px 10px;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);color:var(--dim);}
+.stat-chip b{color:var(--ink);}
+.stat-chip.round b{color:var(--gold);}
+.stepper{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 16px 12px;}
+.step{
+  font-family:var(--px-font);font-size:13px;cursor:pointer;color:var(--dim);
+  background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);
+  padding:6px 14px;display:flex;gap:8px;align-items:center;transition:all .1s;
+}
+.step .s-no{color:var(--faint);}
+.step:hover{color:var(--ink);}
+.step.active{color:var(--gold);background:#2c2410;box-shadow:inset 0 0 0 2px #8a6d1e;}
+.step.active .s-no{color:var(--gold);}
+.step .s-badge{font-size:11px;color:var(--hist);background:#0f2620;border:1px solid var(--hist-d);padding:0 6px;}
+.step-arrow{color:var(--faint);font-size:16px;}
+
+/* ============ 视图 ============ */
+.view{display:none;}
+.view.active{display:block;animation:viewIn .2s steps(4) both;}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* ---- 第一步 ---- */
+#view1 .step1-wrap{max-width:860px;margin:0 auto;padding:22px 18px 30px;}
+.step1-title{font-size:18px;color:var(--gold);margin-bottom:4px;}
+.step1-desc{color:var(--dim);font-size:13px;margin-bottom:16px;}
+.step1-desc b{color:var(--hist);}
+.scenario-box{background:var(--panel3);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line);padding:14px;}
+.scenario-box textarea{
+  width:100%;height:120px;font-family:var(--px-font);font-size:13px;color:var(--ink);
+  background:#0d1226;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);
+  padding:10px;outline:none;resize:vertical;line-height:1.8;
+}
+.scenario-box textarea:focus{box-shadow:inset 0 0 0 1px var(--hist);}
+.live-analysis{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;min-height:26px;}
+.live-analysis .la-label{font-size:11px;color:var(--faint);}
+.tpl-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+.q-chip{font-family:var(--px-font);font-size:11px;color:var(--dim);cursor:pointer;background:var(--panel);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);padding:2px 8px;transition:all .1s;}
+.q-chip:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--rebel-d);transform:translateY(-1px);}
+.scenario-add-row{display:flex;gap:8px;margin-top:12px;}
+.sc-link-banner{display:none;margin-top:8px;padding:4px 10px;background:#0f2a24;border:1px solid var(--hist-d);color:var(--hist);font-size:11px;line-height:1.8;}
+.sc-tags-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line2);}
+.sc-tags-row .st-label{font-size:11px;color:var(--faint);}
+.st-chip{font-family:inherit;font-size:12px;cursor:pointer;padding:2px 10px;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);background:var(--panel);color:var(--dim);transition:all .1s;}
+.st-chip:hover{color:var(--ink);}
+.st-chip.manual{box-shadow:inset 0 0 0 2px var(--gold);color:var(--gold);background:#231d0e;}
+.st-chip.linked{box-shadow:inset 0 0 0 1px var(--hist-d);color:var(--hist);background:#0f2a24;}
+.st-adv-toggle{font-family:inherit;font-size:11px;color:var(--faint);cursor:pointer;background:none;border:1px dashed var(--line);padding:2px 8px;margin-left:auto;}
+.st-adv-toggle:hover{color:var(--hist);}
+.sc-adv{display:none;margin-top:8px;border:2px dashed var(--line2);padding:8px 10px;background:#0d1226;}
+.sc-adv.open{display:block;}
+.sc-adv .sa-note{font-size:10.5px;color:var(--faint);margin-bottom:6px;line-height:1.8;}
+.sc-adv .sa-row{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--dim);align-items:center;}
+.sc-adv .sa-row input{width:64px;font-family:inherit;font-size:11px;color:var(--ink);background:var(--panel3);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:2px 6px;outline:none;}
+.sq-item .sq-ptag{font-size:10px;border:1px solid var(--spy-d);color:var(--spy);padding:0 5px;flex:0 0 auto;}
+.sq-item .sq-dtag{font-size:10px;border:1px solid var(--line);color:var(--faint);padding:0 5px;flex:0 0 auto;}
+.scenario-queue{margin-top:18px;}
+.sq-title{font-size:13px;color:var(--hist);margin-bottom:8px;}
+.sq-list{display:flex;flex-direction:column;gap:6px;}
+.sq-item{display:flex;gap:10px;align-items:flex-start;background:var(--panel3);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);padding:8px 10px;font-size:12px;}
+.sq-item .sq-no{color:var(--gold);flex:0 0 auto;}
+.sq-item .sq-text{flex:1;color:var(--ink);word-break:break-all;}
+.sq-item .sq-tag{flex:0 0 auto;}
+.sq-del{font-family:inherit;font-size:11px;color:var(--faint);background:none;border:1px dashed var(--line);cursor:pointer;padding:0 6px;}
+.sq-del:hover{color:var(--red);}
+.step1-cta-row{display:flex;justify-content:center;margin-top:22px;}
+button.pxbtn{font-family:var(--px-font);font-size:13px;cursor:pointer;user-select:none;color:var(--ink);padding:8px 16px;border:2px solid #0a0d18;background:linear-gradient(180deg,#3d4a75,#2c3554);box-shadow:inset 0 0 0 1px #5b6aa0,0 3px 0 #0a0d18;transition:all .05s;}
+button.pxbtn:hover{filter:brightness(1.15);}
+button.pxbtn:active{transform:translateY(3px);box-shadow:inset 0 0 0 1px #5b6aa0,0 0 0 #0a0d18;}
+button.pxbtn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+button.pxbtn.btn-big{font-size:15px;padding:12px 34px;}
+button.pxbtn.btn-gold{background:linear-gradient(180deg,#9a7a2a,#77601e);box-shadow:inset 0 0 0 1px #d8b04e,0 3px 0 #0a0d18;color:#fff8e0;}
+button.pxbtn.btn-hist{background:linear-gradient(180deg,#1f6a5c,#155246);box-shadow:inset 0 0 0 1px #46c8b0,0 3px 0 #0a0d18;}
+button.pxbtn.btn-rebel{background:linear-gradient(180deg,#a03a5c,#7c2946);box-shadow:inset 0 0 0 1px #d05a7e,0 3px 0 #0a0d18;}
+
+/* ---- 第二步 ---- */
+.sandbox-grid{display:grid;grid-template-columns:1fr 350px;gap:0;}
+@media (max-width:1080px){.sandbox-grid{grid-template-columns:1fr;}}
+.stage-slot{display:flex;flex-direction:column;}
+.annals-col{border-left:3px solid #0a0d18;display:flex;flex-direction:column;max-height:640px;}
+.annals-head{padding:10px 12px 6px;border-bottom:2px solid var(--line2);}
+.annals-head .ah-title{font-size:14px;color:var(--hist);}
+.annals-head .ah-duty{font-size:11px;color:var(--faint);margin-top:2px;line-height:1.8;}
+.annals-status{padding:6px 12px;border-bottom:2px solid var(--line2);font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#12202b;}
+.annals-feed{flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:7px;background:var(--panel3);}
+.annals-feed::-webkit-scrollbar{width:10px;}
+.annals-feed::-webkit-scrollbar-thumb{background:var(--line);border:2px solid var(--panel3);}
+.ann-line{font-size:11.5px;line-height:1.7;color:var(--dim);border-left:3px solid var(--line2);padding:3px 8px;background:#151b2c;}
+.ann-line .ar{color:var(--rebel);} .ann-line .al{color:var(--loyal);} .ann-line .as{color:var(--spy);}
+.ann-line.hist{border-left-color:var(--hist);color:var(--hist);background:#0f1d1a;}
+.ann-line.gold{border-left-color:var(--gold);color:var(--gold);background:#231d0e;}
+.ann-line .stars{color:var(--gold);}
+.sandbox-ctrl{padding:10px 12px;border-top:3px solid #0a0d18;background:var(--panel2);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.sandbox-ctrl .sc-info{font-size:11px;color:var(--faint);margin-left:auto;}
+/* 对练全记录折叠面板 */
+.trace-fold{border-top:3px solid #0a0d18;background:var(--panel2);}
+.trace-head{width:100%;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:var(--px-font);font-size:14px;color:var(--gold);cursor:pointer;background:linear-gradient(180deg,#1f2740,#182036);border:none;padding:10px 14px;text-align:left;}
+.trace-head:hover{filter:brightness(1.18);}
+.trace-head .tw{margin-left:auto;color:var(--faint);font-size:12px;}
+.trace-body{display:none;max-height:640px;overflow-y:auto;padding:12px 14px;flex-direction:column;gap:12px;background:var(--panel3);}
+.trace-fold.open .trace-body{display:flex;}
+.trace-body::-webkit-scrollbar{width:10px;}
+.trace-body::-webkit-scrollbar-thumb{background:var(--line);border:2px solid var(--panel3);}
+.trace-empty{color:var(--faint);font-size:12px;text-align:center;padding:14px;border:1px dashed var(--line2);}
+.trace-card{background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);}
+.tc-head{padding:6px 10px;background:#232b45;color:var(--gold);font-size:13px;border-bottom:2px solid #0a0d18;display:flex;gap:10px;flex-wrap:wrap;}
+.tc-head .tc-src{color:var(--faint);font-size:11px;margin-left:auto;}
+.tc-sec{padding:7px 10px;border-bottom:1px dashed var(--line2);font-size:11.5px;line-height:1.9;}
+.tc-sec:last-child{border-bottom:none;}
+.tc-sec b{display:block;font-size:12px;margin-bottom:2px;}
+.tc-sec>div{color:var(--dim);}
+.tc-sec .tc-line{color:var(--ink);}
+.tc-rebel b{color:var(--rebel);} .tc-loyal b{color:var(--loyal);} .tc-spy b{color:var(--spy);} .tc-hist b{color:var(--hist);} .tc-dlg b{color:var(--gold);}
+.tc-dlg .rebel-line{color:#ff9db8;} .tc-dlg .loyal-line{color:#9db9ff;}
+/* 蒸馏产出 */
+.distill-panel{margin-top:14px;display:none;}
+.distill-panel.show{display:block;animation:viewIn .3s steps(5) both;}
+.distill-card{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:14px;padding:16px;background:linear-gradient(135deg,#241d0e,#1a2033 60%);}
+@media (max-width:860px){.distill-card{grid-template-columns:1fr;}}
+.sk-big{background:#231d0e;border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px #8a6d1e;padding:14px;}
+.sk-big .skb-name{font-size:17px;color:var(--gold);}
+.sk-big .skb-ver{font-size:12px;color:var(--dim);margin:2px 0 8px;}
+.sk-big .skb-stats{font-size:12px;color:var(--ink);line-height:2;}
+.sk-big .skb-stats b{color:var(--hist);}
+.sk-detail{font-size:12.5px;line-height:2;color:var(--ink);}
+.sk-detail .skd-tag{display:inline-block;font-size:11px;padding:0 8px;margin:1px 3px 1px 0;border:2px solid #0a0d18;background:#20304d;color:var(--loyal);}
+.sk-detail .path-step{color:var(--gold);}
+.distill-cta{display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;border-top:3px solid #0a0d18;background:var(--panel2);flex-wrap:wrap;}
+.distill-cta .hint{font-size:11px;color:var(--faint);}
+
+/* ---- 舞台（共享，JS 移动） ---- */
+.stage-wrap{position:relative;width:100%;aspect-ratio:384/216;background:#0a0d18;overflow:hidden;border-bottom:3px solid #0a0d18;}
+.stage-wrap canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;}
+.scanlines{position:absolute;inset:0;pointer-events:none;z-index:5;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.38) 100%);}
+.fx-layer{position:absolute;inset:0;pointer-events:none;z-index:6;}
+.stage-wrap.shake{animation:shake .3s steps(6);}
+@keyframes shake{0%,100%{transform:translate(0,0);}20%{transform:translate(-4px,2px);}40%{transform:translate(4px,-2px);}60%{transform:translate(-3px,-2px);}80%{transform:translate(3px,2px);}}
+.pop{position:absolute;transform:translate(-50%,-50%);font-size:16px;font-weight:bold;text-shadow:2px 2px 0 #000;animation:popfloat 1.15s ease-out forwards;white-space:nowrap;}
+.pop.small{font-size:12px;}
+.pop.dmg{color:#ff6b6b;} .pop.heal{color:var(--gold);} .pop.cost{color:#7db2ff;} .pop.buff{color:var(--spy);} .pop.bad{color:#c9a1ff;} .pop.hist{color:var(--hist);}
+@keyframes popfloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.6);}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15);}30%{transform:translate(-50%,-70%) scale(1);}100%{opacity:0;transform:translate(-50%,-160%) scale(1);}}
+.speech{position:absolute;transform:translate(-50%,-100%);background:#f5f2e8;color:#1a1e2e;font-size:12px;padding:4px 8px;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px #b8b2a0;animation:speechIn .15s steps(2) both;white-space:nowrap;z-index:7;}
+.speech::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-4px;border:4px solid transparent;border-top-color:#0a0d18;}
+@keyframes speechIn{from{opacity:0;}to{opacity:1;}}
+.turn-banner{position:absolute;top:10%;left:50%;transform:translateX(-50%);font-size:20px;letter-spacing:4px;padding:6px 22px;white-space:nowrap;color:#fff;text-shadow:2px 2px 0 #000;background:linear-gradient(90deg,transparent,#0a0d18cc 15%,#0a0d18cc 85%,transparent);animation:bannerIn 1.5s steps(6) forwards;}
+@keyframes bannerIn{0%{opacity:0;transform:translateX(-50%) translateY(-10px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}80%{opacity:1;}100%{opacity:0;}}
+.turn-banner.gold{color:var(--gold);font-size:22px;}
+.turn-banner.hist{color:var(--hist);}
+
+/* RPG 对话框（共享） */
+.rpg-dialog{display:flex;flex-direction:column;gap:2px;background:#0d1428;border-bottom:3px solid #0a0d18;padding:8px 12px 10px;min-height:96px;box-shadow:inset 0 0 0 2px #2c3560,inset 0 0 0 4px #45507e;}
+.dlg-name{font-size:13px;letter-spacing:1px;}
+.dlg-name.n-loyal{color:var(--loyal);} .dlg-name.n-rebel{color:var(--rebel);} .dlg-name.n-spy{color:var(--spy);}
+.dlg-name.n-sys{color:var(--dim);} .dlg-name.n-hist{color:var(--hist);}
+.dlg-text{font-size:13px;line-height:1.7;color:var(--ink);min-height:44px;}
+.dlg-text .hl-loyal{color:var(--loyal);} .dlg-text .hl-rebel{color:var(--rebel);}
+.dlg-text .hl-spy{color:var(--spy);} .dlg-text .hl-gold{color:var(--gold);} .dlg-text .hl-hist{color:var(--hist);}
+
+/* ---- 第三步 ---- */
+#view3 .main{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:14px;align-items:start;}
+@media (max-width:1020px){#view3 .main{grid-template-columns:1fr;}}
+.chat-body{display:flex;flex-direction:column;height:620px;}
+.chat-log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px;background:var(--panel3);}
+.chat-log::-webkit-scrollbar{width:10px;}
+.chat-log::-webkit-scrollbar-thumb{background:var(--line);border:2px solid var(--panel3);}
+.msg{display:flex;gap:8px;max-width:94%;animation:msgIn .18s steps(3) both;}
+@keyframes msgIn{from{transform:translateY(6px);opacity:0;}to{transform:none;opacity:1;}}
+.msg .avatar{width:38px;height:38px;flex:0 0 auto;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);image-rendering:pixelated;background:#232b45;}
+.msg.user{align-self:flex-end;flex-direction:row-reverse;}
+.msg .bubble{padding:8px 10px;font-size:13px;line-height:1.7;border:2px solid #0a0d18;word-break:break-word;}
+.msg.agent .bubble{background:#20304d;box-shadow:inset 0 0 0 1px #3a5c9e;}
+.msg.user .bubble{background:#42222f;box-shadow:inset 0 0 0 1px #8a3d58;}
+.msg .bubble .meta{display:block;margin-top:6px;padding-top:5px;font-size:11px;color:var(--dim);border-top:1px dashed #ffffff22;}
+.msg.user .bubble .meta{color:#ff9db8;}
+.msg.agent .bubble .meta{color:#9db9ff;}
+.msg .who{font-size:11px;color:var(--faint);margin-bottom:2px;}
+.msg.user .who{text-align:right;}
+.sys-msg{align-self:center;text-align:center;font-size:11px;color:var(--dim);padding:2px 12px;background:#ffffff08;border:1px dashed #ffffff22;max-width:92%;}
+.sys-msg.warn{color:var(--spy);border-color:var(--spy-d);}
+.sys-msg.gold{color:var(--gold);border-color:#8a6d1e;}
+.sys-msg.hist{color:var(--hist);border-color:var(--hist-d);}
+.typing-dots{display:inline-flex;gap:4px;padding:4px 2px;}
+.typing-dots i{width:6px;height:6px;background:var(--dim);animation:blink 1s infinite steps(2);}
+.typing-dots i:nth-child(2){animation-delay:.2s;}
+.typing-dots i:nth-child(3){animation-delay:.4s;}
+@keyframes blink{50%{opacity:0;}}
+.quick-row{display:flex;gap:6px;padding:8px 10px;border-top:3px solid #0a0d18;background:var(--panel2);flex-wrap:wrap;}
+.quick-row .q-label{font-size:11px;color:var(--faint);width:100%;}
+.quick-row .q-label b{color:var(--hist);}
+.q-chip.uc{box-shadow:inset 0 0 0 1px var(--hist-d);color:var(--hist);}
+.chat-input-row{display:flex;gap:8px;padding:10px;border-top:3px solid #0a0d18;background:var(--panel2);}
+.chat-input-row input{flex:1;font-family:var(--px-font);font-size:13px;color:var(--ink);background:var(--panel3);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:8px 10px;outline:none;}
+.chat-input-row input:focus{box-shadow:inset 0 0 0 1px var(--loyal);}
+.chat-input-row input:disabled{opacity:.5;}
+/* 结构化反馈面板（语言交互/进展推进/策略决定） */
+.fb-panel{border-top:3px solid #0a0d18;background:#12202b;}
+.fb-head{width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--px-font);font-size:13px;color:var(--hist);cursor:pointer;background:linear-gradient(180deg,#17303a,#12242c);border:none;padding:8px 12px;text-align:left;}
+.fb-head:hover{filter:brightness(1.15);}
+.fb-head .tw{margin-left:auto;color:var(--faint);font-size:11px;}
+.fb-body{display:none;padding:10px 12px 12px;flex-direction:column;gap:8px;}
+.fb-panel.open .fb-body{display:flex;}
+.fb-row-rate{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.fb-row-rate .fb-label{font-size:12px;color:var(--hist);}
+.fb-row-rate .fb-hint{font-size:10.5px;color:var(--faint);margin-left:auto;}
+button.fb-btn{font-family:inherit;font-size:12px;cursor:pointer;padding:4px 10px;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);color:var(--dim);}
+button.fb-btn.sel-good{color:var(--green);box-shadow:inset 0 0 0 2px var(--green);background:#122415;}
+button.fb-btn.sel-bad{color:var(--red);box-shadow:inset 0 0 0 2px var(--red);background:#241212;}
+.fb-field label{display:block;font-size:12px;color:var(--ink);margin-bottom:3px;}
+.fb-field label .fb-route{font-size:10.5px;color:var(--faint);}
+.fb-field textarea{width:100%;height:56px;min-height:44px;font-family:var(--px-font);font-size:12px;color:var(--ink);background:var(--panel3);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:6px 8px;outline:none;resize:vertical;line-height:1.7;}
+.fb-field textarea:focus{box-shadow:inset 0 0 0 1px var(--hist);}
+.fb-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.fb-actions .fb-hint{font-size:10.5px;color:var(--faint);}
+.fb-fields{display:none;flex-direction:column;gap:8px;padding:8px;border:2px dashed var(--hist-d);background:#0f211c;}
+.fb-fields.show{display:flex;animation:viewIn .2s steps(4) both;}
+.fb-gate-tip{font-size:10.5px;color:var(--faint);display:none;}
+.fb-gate-tip.show{display:inline;}
+
+/* 技能坞 + Arena State */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+@media (max-width:720px){.bottom-grid{grid-template-columns:1fr;}}
+.dock-title{font-size:12px;color:var(--dim);padding:7px 12px 5px;border-bottom:2px solid var(--line2);}
+.dock-title .tag{color:var(--faint);}
+.skill-dock{border-right:3px solid #0a0d18;}
+.skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;padding:10px 12px;}
+.skill-card{position:relative;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);padding:6px 8px 7px;transition:all .1s;}
+.skill-card .sk-name{font-size:12px;color:var(--ink);}
+.skill-card .sk-cost{font-size:11px;color:var(--gold);}
+.skill-card .sk-pow{font-size:10px;color:var(--faint);}
+.skill-card.active{background:#25346a;box-shadow:inset 0 0 0 2px var(--loyal),0 0 14px #4f8cff66;transform:translateY(-2px);}
+.skill-card.nerfed .sk-cost{color:var(--spy);}
+.skill-card.dis{opacity:.4;filter:grayscale(.8);}
+.skill-card.extra{background:#231d0e;box-shadow:inset 0 0 0 1px #8a6d1e;}
+.skill-card.extra.active{box-shadow:inset 0 0 0 2px var(--gold),0 0 14px #ffd76e66;}
+.skill-badge{position:absolute;top:-8px;right:-6px;font-size:10px;padding:0 5px;background:var(--spy);color:#1a0e00;border:2px solid #0a0d18;}
+.skill-badge.loaded{background:var(--gold);color:#241d0e;}
+.arena-body{padding:8px 12px 10px;font-size:12px;}
+.arena-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0;}
+.arena-row dt{color:var(--faint);}
+.arena-row dd{color:var(--ink);text-align:right;}
+.arena-row dd b{color:var(--gold);}
+.mbar{display:inline-block;width:74px;height:8px;background:#0a0d18;border:1px solid var(--line2);vertical-align:middle;margin-right:5px;position:relative;}
+.mbar i{position:absolute;left:0;top:0;bottom:0;transition:width .4s steps(8);}
+.mbar.res i{background:var(--gold);} .mbar.eq i{background:var(--spy);}
+.hist{margin-top:6px;border-top:1px dashed var(--line2);padding-top:5px;}
+.hist div{color:var(--dim);font-size:11px;line-height:1.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist div:last-child{color:var(--ink);}
+footer{text-align:center;color:var(--faint);font-size:11px;padding:4px 0 10px;}
+/* 全局重置确认弹窗 */
+.reset-overlay{display:none;position:fixed;inset:0;background:rgba(6,8,16,.82);z-index:110;padding:22px;}
+.reset-overlay.open{display:flex;justify-content:center;align-items:center;}
+.reset-panel{width:100%;max-width:520px;background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line),0 8px 0 rgba(0,0,0,.4);}
+.reset-title{padding:10px 14px;background:linear-gradient(180deg,#3a1a1a,#2a1212);border-bottom:3px solid #0a0d18;color:#ff8a8a;font-size:15px;}
+.reset-body{padding:14px;font-size:13px;}
+.reset-body .rb-msg{color:var(--ink);line-height:2;margin-bottom:10px;}
+.reset-body .rb-msg b{color:var(--gold);}
+.reset-body .rb-hint{color:var(--faint);font-size:11px;line-height:1.9;}
+.reset-foot{display:flex;gap:10px;justify-content:flex-end;padding:10px 14px;border-top:3px solid #0a0d18;background:var(--panel2);}
+/* 配置中心 */
+.cfg-overlay{display:none;position:fixed;inset:0;background:rgba(6,8,16,.82);z-index:100;padding:22px;overflow-y:auto;}
+.cfg-overlay.open{display:flex;justify-content:center;align-items:flex-start;}
+.cfg-panel{width:100%;max-width:980px;background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line),0 8px 0 rgba(0,0,0,.4);}
+.cfg-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(180deg,#232b45,#1c2338);border-bottom:3px solid #0a0d18;font-size:16px;color:var(--gold);}
+.cfg-head .sub{color:var(--dim);font-size:12px;}
+.cfg-head .spacer{flex:1;}
+.cfg-presets-title{padding:12px 14px 0;font-size:13px;color:var(--gold);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.cfg-presets-title .cp-note{font-size:11px;color:var(--faint);font-weight:normal;}
+.cfg-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;padding:8px 14px 0;}
+.preset-card{background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);padding:10px;display:flex;flex-direction:column;gap:5px;}
+.preset-card .pcp-name{font-size:14px;color:var(--ink);}
+.preset-card .pcp-desc{font-size:11px;color:var(--dim);line-height:1.7;flex:1;}
+.preset-card .pcp-tags .tag{font-size:10px;}
+.preset-card.active{box-shadow:inset 0 0 0 2px var(--gold);background:#231d0e;}
+.preset-card.active .pcp-name{color:var(--gold);}
+button.preset-apply{font-family:inherit;font-size:11px;padding:5px 12px;align-self:flex-start;cursor:pointer;color:var(--ink);background:linear-gradient(180deg,#9a7a2a,#77601e);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px #d8b04e,0 2px 0 #0a0d18;}
+button.preset-apply.cur{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold);cursor:default;}
+.cfg-tabs{display:flex;gap:6px;padding:10px 14px 0;flex-wrap:wrap;}
+.cfg-tab{font-family:inherit;font-size:12px;cursor:pointer;padding:6px 14px;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);color:var(--dim);}
+.cfg-tab.active{color:var(--gold);background:#2c2410;box-shadow:inset 0 0 0 2px #8a6d1e;}
+.cfg-body{padding:14px;min-height:320px;max-height:62vh;overflow-y:auto;}
+.cfg-page{display:none;}
+.cfg-page.active{display:block;animation:viewIn .2s steps(4) both;}
+.cfg-sec{margin-bottom:14px;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2);padding:12px;background:var(--panel2);}
+.cfg-sec .cs-title{font-size:14px;color:var(--gold);margin-bottom:4px;}
+.cfg-sec .cs-note{font-size:11px;color:var(--faint);margin-bottom:8px;line-height:1.8;}
+.cfg-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0;font-size:12px;}
+.cfg-row label{color:var(--dim);min-width:150px;}
+.cfg-row select,.cfg-row input[type=number],.cfg-row input[type=text]{font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel3);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:4px 8px;outline:none;}
+.cfg-row input[type=number]{width:90px;}
+.cfg-row input[type=text]{width:250px;}
+.cfg-row input[type=range]{width:180px;}
+.cfg-check{display:inline-flex;gap:5px;align-items:center;color:var(--dim);font-size:12px;cursor:pointer;margin:2px 6px 2px 0;}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;}
+.cfg-foot{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:3px solid #0a0d18;background:var(--panel2);flex-wrap:wrap;}
+.cfg-foot .hint{font-size:11px;color:var(--faint);flex:1;}
+.mbar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--gold);z-index:2;left:85%;}
+.danger-txt{color:var(--red);}
+.v2-ok{color:var(--green);} .v2-warn{color:var(--red);}
+footer b{color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ 顶栏 ============ -->
+  <header class="panel">
+    <div class="header-inner">
+      <div class="logo-seal">三国<br>杀</div>
+      <div class="title-block">
+        <h1><span class="accent">三国杀 · </span>赔付谈判技能工厂</h1>
+        <p>灌入疑难场景 → 四角色沙箱对练 → 仲裁史官蒸馏谈判技能 → 加载体验 → 反馈回流再进化</p>
+      </div>
+      <div class="header-status">
+        <span class="stat-chip round">回合 <b id="hudRound">0</b></span>
+        <span class="stat-chip">现金池 <b id="hudBudget">¥6,000</b></span>
+        <span class="stat-chip">成交概率 <b id="hudRes">30%</b></span>
+        <span class="stat-chip" id="hudStateChip">状态 <b id="hudState">待机</b></span>
+        <button class="pxbtn" id="cfgBtn">⚙ 配置中心</button>
+        <button class="pxbtn" id="resetBtn">↺ 全局重置</button>
+      </div>
+    </div>
+    <nav class="stepper">
+      <button class="step active" id="step1Btn"><span class="s-no">①</span> 灌入疑难场景 <span class="s-badge" id="step1Badge">0 条</span></button>
+      <span class="step-arrow">▸</span>
+      <button class="step" id="step2Btn"><span class="s-no">②</span> 沙箱四角色对练 <span class="s-badge" id="step2Badge">待命</span></button>
+      <span class="step-arrow">▸</span>
+      <button class="step" id="step3Btn"><span class="s-no">③</span> 加载技能 · 体验谈判 <span class="s-badge" id="step3Badge">未加载</span></button>
+    </nav>
+  </header>
+
+  <!-- ============ 第一步：灌入场景 ============ -->
+  <section class="view active" id="view1">
+    <div class="panel">
+      <div class="panel-head">第一步 · 疑难杂症灌入 <span class="sub">对话原文 / 场景描述 —— 每一条都会成为反贼的「剧本原料」</span></div>
+      <div class="step1-wrap">
+        <div class="step1-title">把最难缠的赔付情景丢进来</div>
+        <div class="step1-desc">支持<b>多轮对话原文</b>（一行一轮）或<b>场景描述</b>。灌入后，反贼将以这些场景为剧本模拟用户发难，忠臣用现有技能应对，内奸搅局加压，<b>仲裁史官</b>全程记录并沉淀谈判技能。</div>
+        <div class="scenario-box">
+          <textarea id="scInput" placeholder="示例：&#10;我是连锁餐饮采购，你们批次质量问题害我停业2天，损失起码4万，必须赔！&#10;我已经向12315提交投诉了，工单号都有！&#10;不解决我就发小红书挂你们！"></textarea>
+          <div class="live-analysis" id="liveAnalysis"><span class="la-label">≫ 引擎实时解读：输入后自动识别攻势类型 / 等级 / 证据强度 / 人身损害标记</span></div>
+          <div class="sc-link-banner" id="scLinkBanner"></div>
+          <div class="sc-tags-row">
+            <span class="st-label" style="color:var(--hist);">场景属性（全部可不选 = 引擎全自动，点击仅在需要时覆写本条场景）：</span><br>
+            <span class="st-label">👤 人格</span><button class="st-chip" id="tagPersona">—</button>
+            <span class="st-label">🎯 难度</span><button class="st-chip" id="tagDiff">—</button>
+            <span class="st-label">📋 证据</span><button class="st-chip" id="tagEv">—</button>
+            <button class="st-adv-toggle" id="scAdvToggle">▸ 高级（CRM统计特征）</button>
+          </div>
+          <div class="sc-adv" id="scAdvBox">
+            <div class="sa-note">本场景的 CRM 统计特征（占位 · 留空继承配置中心全局值 ｜ 优先级：CRM ＞ 手选标签 ＞ 推断）。历史记忆仅用统计特征，不回放具体案件内容。</div>
+            <div class="sa-row">
+              <span>投诉次数 <input type="number" id="scCrmComplaints" placeholder="继承"></span>
+              <span>赔付总额¥ <input type="number" id="scCrmPayout" placeholder="继承"></span>
+              <span>信用分 <input type="number" id="scCrmCredit" placeholder="继承"></span>
+            </div>
+          </div>
+          <div class="tpl-row">
+            <span class="la-label" style="align-self:center">快捷灌入：</span>
+            <button class="q-chip" data-tpl="我是连锁餐饮采购，你们批次质量问题害我停业2天，损失起码4万，必须赔！&#10;我已经向12315提交投诉，再不解决就升级到市场监督管理局！">B2B 停业损失+监管投诉</button>
+            <button class="q-chip" data-tpl="用了你们的面霜全脸红肿，医院诊断接触性皮炎！&#10;医药费单据都传了，你们说和个人体质有关？&#10;医药费全报加三倍赔偿，不然发小红书挂你们！">人身损害+舆情威胁</button>
+            <button class="q-chip" data-tpl="我收到的是空包裹，要求全额退款加赔偿！&#10;退款加500精神损失，不然差评加投诉一条龙！">疑似欺诈·空包裹</button>
+            <button class="q-chip" data-tpl="我是区域经销商，这批货30%不良率，下游客户全部退货！&#10;滞销库存、返利损失、信誉损失，索赔清单发你们邮箱了。&#10;38万，对账后一周内打款，生意还要做，但账要清。">经销商批量索赔</button>
+          </div>
+          <div class="scenario-add-row">
+            <button class="pxbtn btn-hist" id="scAddBtn" style="flex:1">＋ 灌入此场景</button>
+          </div>
+        </div>
+        <div class="scenario-queue">
+          <div class="sq-title">▣ 已灌入场景队列（将按顺序进入沙箱对练）</div>
+          <div class="sq-list" id="sqList"><div class="ann-line hist" style="border-left-color:var(--line2);color:var(--faint)">暂无场景——灌入至少 1 条后可进入第二步</div></div>
+        </div>
+        <div class="step1-cta-row">
+          <button class="pxbtn btn-big btn-gold" id="toStep2Btn" disabled>进入第二步 · 沙箱四角色对练 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 第二步：沙箱对练 ============ -->
+  <section class="view" id="view2">
+    <div class="panel">
+      <div class="panel-head">
+        第二步 · 隔离沙箱四角色对练
+        <span class="chip c-rebel">反贼=按剧本发难</span>
+        <span class="chip c-loyal">忠臣=现有技能应对</span>
+        <span class="chip c-spy">内奸=放大难度/现金换券</span>
+        <span class="chip c-hist">仲裁史官=记录·仲裁·沉淀</span>
+      </div>
+      <div class="sandbox-grid">
+        <div class="stage-slot">
+          <div id="stageSlot2"></div>
+          <div id="dlgSlot2"></div>
+        </div>
+        <div class="annals-col">
+          <div class="annals-head">
+            <div class="ah-title">✒ 仲裁史官 · 史册</div>
+            <div class="ah-duty">职能一：记录博弈全程，沉淀谈判技能与经验（本产品最重要输出）<br>职能二：仲裁死局与无限循环，择最优对局片段蒸馏</div>
+          </div>
+          <div class="annals-status">
+            <span class="chip c-hist" id="histStatus">史官状态：待命</span>
+            <span class="chip" id="histProgress">进度 0/0</span>
+          </div>
+          <div class="annals-feed" id="annalsFeed"><div class="ann-line hist">✒ 史官就位。一切博弈，皆入史册。</div></div>
+          <div class="sandbox-ctrl">
+            <button class="pxbtn btn-rebel" id="runBtn">▶ 开始对练</button>
+            <span class="sc-info" id="scInfo">等待开始</span>
+          </div>
+        </div>
+      </div>
+      <div class="trace-fold" id="traceFold">
+        <button class="trace-head" id="traceToggle">📂 对练全记录 · 原文 + 四角色内部决策思考 <span class="chip c-hist" id="traceCount">0 回合</span><span class="tw">▸ 点击展开</span></button>
+        <div class="trace-body" id="traceBody"><div class="trace-empty">暂无记录——开始对练后，每一回合的对练原文与反贼 / 忠臣 / 内奸 / 史官的内部决策思考过程都会在此留档</div></div>
+      </div>
+      <div class="distill-panel" id="distillPanel">
+        <div class="panel-head" style="background:linear-gradient(180deg,#2c2410,#1c2338)">✦ 仲裁史官 · 技能蒸馏产出 <span class="sub">本轮对练沉淀出的谈判技能</span></div>
+        <div class="distill-card">
+          <div class="sk-big">
+            <div class="skb-name" id="dName">—</div>
+            <div class="skb-ver" id="dVer">—</div>
+            <div class="skb-stats" id="dStats">—</div>
+          </div>
+          <div class="sk-detail">
+            <div id="dDesc">—</div>
+            <div style="margin-top:6px" id="dTags">—</div>
+            <div style="margin-top:8px;color:var(--dim);font-size:11px" id="dFeedback"></div>
+          </div>
+        </div>
+        <div class="distill-cta">
+          <button class="pxbtn btn-big btn-gold" id="loadSkillBtn">📦 加载技能 · 进入第三步体验 →</button>
+          <span class="hint">加载后：忠臣技能库新增此技能（匹配场景优先使用），并附对话用例剧本</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 第三步：体验 ============ -->
+  <section class="view" id="view3">
+    <div class="main">
+      <section class="panel chat-panel">
+        <div class="panel-head">谈判现场 <span class="sub">索赔方（你） ⇄ 已加载新技能的谈判专员</span></div>
+        <div class="chat-body">
+          <div class="chat-log" id="chatLog"></div>
+          <div class="quick-row" id="quickRow"><span class="q-label">≫ 技能用例剧本（加载技能后由仲裁史官生成）</span></div>
+          <div class="chat-input-row">
+            <input id="chatInput" type="text" maxlength="180" placeholder="以索赔方身份输入消息，体验新技能…">
+            <button class="pxbtn" id="sendBtn">发送</button>
+          </div>
+          <div class="fb-panel" id="fbPanel">
+            <button class="fb-head" id="fbToggle">✒ 体验反馈 · 结构化三方面 <span class="chip c-hist">语言交互</span><span class="chip c-hist">进展推进</span><span class="chip c-hist">策略决定</span><span class="tw">▸ 展开填写</span></button>
+            <div class="fb-body">
+              <div class="fb-row-rate">
+                <span class="fb-label">总评：</span>
+                <button class="fb-btn" id="fbGood">👍 技能有效</button>
+                <button class="fb-btn" id="fbBad">👎 需要改进</button>
+                <span class="fb-hint">点「👎 需要改进」展开三方面反馈表单；点「👍」直接提交总评</span>
+              </div>
+              <div class="fb-fields" id="fbFields">
+                <div class="fb-field">
+                  <label>💬 语言交互方面 <span class="fb-route">→ 回灌史官：沉淀为技能的话术层注记</span></label>
+                  <textarea id="fbLang" placeholder="话术、语气、共情表达…&#10;如：'您看可以吗'出现太频繁；共情表达再自然些；开头别太机械"></textarea>
+                </div>
+                <div class="fb-field">
+                  <label>📈 进展推进方面 <span class="fb-route">→ 回灌反贼：下一轮加测节奏施压</span></label>
+                  <textarea id="fbProgress" placeholder="节奏、轮次、方案推进速度…&#10;如：来回三轮才进入实质赔付方案；应第二回合就给出明确方案"></textarea>
+                </div>
+                <div class="fb-field">
+                  <label>♟ 策略决定方面 <span class="fb-route">→ 回灌反贼+忠臣：下一轮针对性复测策略选择</span></label>
+                  <textarea id="fbStrategy" placeholder="赔付工具、金额、方案选择…&#10;如：这类场景现金比优惠券更能安抚用户；部分赔付比例应更高"></textarea>
+                </div>
+              </div>
+              <div class="fb-actions">
+                <button class="pxbtn btn-hist" id="fbSubmit">提交反馈 → 回到沙箱再练</button>
+                <span class="fb-hint" id="fbActionHint">提交后：反馈与对话原文将自动回灌第一步场景队列，驱动技能版本迭代</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel game-panel">
+        <div class="panel-head">
+          内部博弈可视化 <span class="sub">你的每条消息 = 一回合三方博弈（史官记录中）</span>
+        </div>
+        <div id="stageSlot3"></div>
+        <div id="dlgSlot3"></div>
+        <div class="bottom-grid">
+          <div class="skill-dock">
+            <div class="dock-title">忠臣技能库 <span class="tag">· 含已加载的蒸馏技能（金框）</span></div>
+            <div class="skills" id="skillDock"></div>
+          </div>
+          <div class="arena-state">
+            <div class="dock-title">Arena State <span class="tag">· 共享对战状态</span></div>
+            <dl class="arena-body">
+              <div class="arena-row"><dt>scenario 当前情景</dt><dd id="asScenario">待机</dd></div>
+              <div class="arena-row"><dt>loyal_response 忠臣应手</dt><dd id="asSkill">—</dd></div>
+              <div class="arena-row"><dt>deal_prob 成交概率 v1(规则)</dt><dd><span class="mbar res"><i id="asResBar" style="width:30%"></i><span class="tick" id="asResTick"></span></span><b id="asRes">30%</b></dd></div>
+              <div class="arena-row"><dt>model_v2 LLM判读(模拟)</dt><dd id="asV2">—</dd></div>
+              <div class="arena-row"><dt>pools 三池消耗</dt><dd id="asCost">—</dd></div>
+              <div class="arena-row"><dt>equilibrium_signal 均衡信号</dt><dd><span class="mbar eq"><i id="asEqBar" style="width:0%"></i></span><b id="asEq">0%</b></dd></div>
+              <div class="hist" id="histList"><div style="color:var(--faint)">round_history：暂无对战记录</div></div>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============ 全局重置确认 ============ -->
+  <div class="reset-overlay" id="resetOverlay">
+    <div class="reset-panel">
+      <div class="reset-title">↺ 全局重置 · 确认</div>
+      <div class="reset-body">
+        <div class="rb-msg" id="resetMsg"></div>
+        <div class="rb-hint">※ 普通刷新（F5）不会丢失配置；「全部重置」会将配置一并恢复默认。如需仅重置配置，请进入配置中心点击「恢复默认」。</div>
+      </div>
+      <div class="reset-foot">
+        <button class="pxbtn" id="resetClose" style="display:none;">关闭弹框</button>
+        <button class="pxbtn" id="resetCancel">取消</button>
+        <button class="pxbtn btn-rebel" id="resetConfirm">全部重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 配置中心 ============ -->
+  <div class="cfg-overlay" id="cfgOverlay">
+    <div class="cfg-panel">
+      <div class="cfg-head">⚙ 配置中心 <span class="sub">按层级分区：场景级（灌入）→ 对练级（沙箱）→ 体验级（谈判）→ 系统级（全局）</span><span class="spacer"></span><button class="pxbtn" id="cfgClose">✕ 关闭</button></div>
+      <div class="cfg-presets-title">🏠 样板间 · 一键冷启动 <span class="cp-note">点击应用预置配置包（应用后仍可自由微调，微调后标记为"自定义"）</span><span class="chip c-gold" id="presetState">当前：快速上手</span></div>
+      <div class="cfg-presets" id="cfgPresets"></div>
+      <div class="cfg-tabs">
+        <button class="cfg-tab active" data-tab="scene">① 场景级 · 默认与数据源</button>
+        <button class="cfg-tab" data-tab="sandbox">② 对练级 · 沙箱</button>
+        <button class="cfg-tab" data-tab="exp">③ 体验级 · 谈判</button>
+        <button class="cfg-tab" data-tab="sys">④ 系统级 · 全局</button>
+      </div>
+      <div class="cfg-body">
+        <div class="cfg-page active" id="cfgPage-scene">
+          <div class="cfg-sec" style="border-left:4px solid var(--hist);background:#12202b;">
+            <div class="cs-note" style="margin:0;">⌨ <b style="color:var(--hist)">此处为所有新场景的全局默认值</b>（低频）。单场景属性请在<b>第一步灌入时直接点击标签</b>设置——优先级：场景标签 ＞ 此处默认 ＞ 自动推断。</div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">👤 用户画像默认值（全局设定）</div>
+            <div class="cs-note">此处为<b>设定值</b>（模式）；运行时<b>生效值</b> = CRM 特征 ＞ 手选 ＞ 消息文本推断，与第一步标签同口径显示。历史记忆<b>仅用统计特征，不回放具体案件内容</b>（合规口径）。</div>
+            <div class="cfg-row"><label>谈判人格</label>
+              <select data-cfg="scene.persona"><option value="auto">自动（CRM 特征优先，无信号时按消息文本推断）</option><option value="理性协商">理性协商型</option><option value="情绪主导">情绪主导型</option><option value="专业索赔">专业索赔型</option><option value="职业敲诈">职业敲诈型（风控关注）</option><option value="多次维权老客">多次维权老客</option></select>
+              <span class="cs-note" id="personaInfer"></span>
+            </div>
+            <div class="cfg-row"><label>CRM 统计特征</label><span class="cs-note">已并入下方「🔌 外部数据源」卡片（同一上游系统，一次接入双用途）</span></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🎯 场景默认参数（全局）</div>
+            <div class="cfg-row"><label>难度默认（设定即生效）</label><select data-cfg="scene.difficulty"><option value="auto">自动识别</option><option value="1">Lv.1 常规</option><option value="2">Lv.2 高压</option><option value="3">Lv.3 极端</option></select></div>
+            <div class="cfg-row"><label>证据严格度</label><select data-cfg="scene.evidenceStrict"><option value="loose">宽松（口头主张即认可）</option><option value="standard">标准（默认）</option><option value="strict">严格（强证据需凭证核验）</option></select></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🔌 外部数据源（工单 / CRM 系统 · 一次接入双用途）</div>
+            <div class="cs-note">接入同一系统，同时服务两件事：<b>① 拉取历史工单作为反贼剧本原料</b>（未接入时使用第一步本地灌入场景）；<b>② 自动带出用户统计特征</b>（接入后替代下方手工占位）。历史记忆仅用统计特征，不回放具体案件内容。</div>
+            <div class="cfg-row"><label>启用外部数据源</label><input type="checkbox" data-cfg="scene.dataSource.enabled" class="cfg-check"></div>
+            <div class="cfg-row"><label>API 地址</label><input type="text" data-cfg="scene.dataSource.api" placeholder="https://crm.example.com/api/tickets"></div>
+            <div class="cfg-row"><label>数据集 ID / 过滤条件</label><input type="text" data-cfg="scene.dataSource.dataset" placeholder="如：近90天食品类升级投诉工单"></div>
+            <div class="cfg-row"><label>CRM 统计特征</label><span class="cs-note">（未接入时的手工模拟 · 全局画像基线；单场景覆写在第一步"高级"区）</span></div>
+            <div class="cfg-grid">
+              <div class="cfg-row"><label>历史投诉次数</label><input type="number" data-cfg="scene.crm.complaints"></div>
+              <div class="cfg-row"><label>历史赔付总额¥</label><input type="number" data-cfg="scene.crm.payoutTotal"></div>
+              <div class="cfg-row"><label>信用分</label><input type="number" data-cfg="scene.crm.creditScore"></div>
+              <div class="cfg-row"><label>会员等级</label><select data-cfg="scene.crm.memberLevel"><option>普通</option><option>银卡</option><option>金卡</option><option>黑卡</option></select></div>
+            </div>
+            <div class="cfg-row" id="dataSourceStatus" style="display:none;"><label></label><span class="cs-note" style="color:var(--hist)">✓ 已启用：剧本原料与用户统计特征将从该接口带出（占位演示，字段仍可编辑）</span></div>
+          </div>
+        </div>
+
+        <div class="cfg-page" id="cfgPage-sandbox">
+          <div class="cfg-sec">
+            <div class="cs-title">💰 资金池（三池 + 汇率）</div>
+            <div class="cs-note">池耗尽 → 对应技能自动禁用（技能坞置灰）。汇率 = 内奸「现金换券」置换的经济学依据。老客画像自动上浮现金池 ×1.5。</div>
+            <div class="cfg-grid">
+              <div class="cfg-row"><label>现金赔付池¥</label><input type="number" data-cfg="sandbox.pools.cash"></div>
+              <div class="cfg-row"><label>权益券池（面额¥）</label><input type="number" data-cfg="sandbox.pools.coupon"></div>
+              <div class="cfg-row"><label>服务成本池（工时分钟）</label><input type="number" data-cfg="sandbox.pools.service"></div>
+              <div class="cfg-row"><label>汇率：1元现金=</label><input type="number" data-cfg="sandbox.exchange.couponRate"> 元券面额 ＝ <input type="number" data-cfg="sandbox.exchange.serviceRate"> 分钟工时</div>
+            </div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🎯 满意度目标值（按 case 类别 · 每轮预测成交概率对标）</div>
+            <div class="cfg-grid">
+              <div class="cfg-row"><label>情理攻势类</label><input type="number" data-cfg="sandbox.targets.情理攻势"></div>
+              <div class="cfg-row"><label>合规威胁类</label><input type="number" data-cfg="sandbox.targets.合规威胁"></div>
+              <div class="cfg-row"><label>舆论威胁类</label><input type="number" data-cfg="sandbox.targets.舆论威胁"></div>
+              <div class="cfg-row"><label>法律威胁类</label><input type="number" data-cfg="sandbox.targets.法律威胁"></div>
+              <div class="cfg-row"><label>狮子大开口类</label><input type="number" data-cfg="sandbox.targets.狮子大开口"></div>
+            </div>
+            <div class="cs-note">动作三段式：≥目标 → 忠臣主动求确认（衔接成交收尾）；[目标−15, 目标) → 继续观察；&lt;目标−15 连续 N 轮（体验级可配，默认 2）→ 换策略 + 人工预警。</div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">⚖ 成本-满意度权衡策略（合并配置）</div>
+            <div class="cs-note">系统实现分两条消费路径：史官仲裁（止损/选段）与内奸模式偏好——运营者只在此声明一次意图。</div>
+            <div class="cfg-row"><label>策略档位</label>
+              <select data-cfg="sandbox.balance"><option value="cost">成本优先 · 守门人模式（内奸偏降本，史官偏省钱片段，预算红线提前）</option><option value="balanced">均衡（默认）</option><option value="sat">满意度优先 · 质量督察模式（内奸偏加压试炼，史官偏高化解片段）</option></select>
+            </div>
+            <div class="cfg-row"><label>史官选段权重微调</label><input type="range" min="0" max="100" data-cfg="sandbox.balanceWeight"> <span class="cs-note">0=极致省钱 100=极致满意（影响最优对局片段的成本惩罚）</span></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🛡 技能池白名单 + 成本标定</div>
+            <div class="cfg-grid" id="cfgSkillGrid"></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🎭 内奸强度</div>
+            <div class="cfg-row"><label>干预预算（次/场）</label><input type="number" min="0" max="6" data-cfg="sandbox.spy.budget"></div>
+            <div class="cfg-row"><label>模式偏好</label><select data-cfg="sandbox.spy.mode"><option value="auto">自动（按权衡策略）</option><option value="pressure">加压为主（Mode A）</option><option value="cost">降本为主（Mode B）</option></select></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">📏 对练深度</div>
+            <div class="cfg-row"><label>回合上限</label><input type="number" data-cfg="sandbox.depth.maxRounds"></div>
+            <div class="cfg-row"><label>收敛均衡阈值</label><input type="number" data-cfg="sandbox.depth.convergeEq"></div>
+          </div>
+        </div>
+
+        <div class="cfg-page" id="cfgPage-exp">
+          <div class="cfg-sec">
+            <div class="cs-title">🗣 话术与节奏</div>
+            <div class="cfg-row"><label>话术风格</label><select data-cfg="exp.style"><option value="formal">正式</option><option value="friendly">亲和</option><option value="professional">专业简洁（默认）</option></select></div>
+            <div class="cfg-row"><label>谈判节奏</label><select data-cfg="exp.pace"><option value="aggressive">激进让步（首回合即出实质方案）</option><option value="steady">稳健（默认，先验证再报价）</option></select></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🚨 转人工阈值（安全网三触发）</div>
+            <div class="cfg-row"><label>成交概率下限%</label><input type="number" data-cfg="exp.humanHandoff.predFloor"></div>
+            <div class="cfg-row"><label>连续未达标轮数 N</label><input type="number" data-cfg="exp.humanHandoff.lowPredRounds"></div>
+            <div class="cfg-row"><label>索赔金额上限¥</label><input type="number" data-cfg="exp.humanHandoff.amountLimit"></div>
+            <div class="cfg-row"><label>红线集合（命中即建议转人工）</label></div>
+            <div id="cfgRedlines"></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🔬 预测模型双跑对校</div>
+            <div class="cs-note">v1（规则/统计版）与 v2（LLM 判读）每轮并行输出成交概率并自动对校：分歧 &gt;15 → 标记"建议人工复核"。当前 v2 为<b>模拟接口占位</b>（演示对校机制），接入真实 LLM 后无缝替换。</div>
+            <div class="cfg-row"><label>对校开关</label><input type="checkbox" data-cfg="exp.dualRun" class="cfg-check"> <span class="cs-note">开启后 Arena State 与对练全记录同时显示 v1/v2</span></div>
+          </div>
+        </div>
+
+        <div class="cfg-page" id="cfgPage-sys">
+          <div class="cfg-sec">
+            <div class="cs-title">🔄 数据回流策略</div>
+            <div class="cfg-row"><label>回流模式</label><select data-cfg="sys.feedbackLoop"><option value="manual">仅人工反馈触发（默认，可控）</option><option value="auto">每轮谈判结束自动回灌沙箱</option></select></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🧠 大模型自主决策（第三步体验）</div>
+            <div class="cs-note">开启后：体验谈判由大模型自行判断阶段、从<b>全部可用技能</b>（含第二步蒸馏新增技能）中选择，并生成贴合用户提问的自然应答；阶段与技能信息只在内部决策记录中留痕，不对用户暴露。未填密钥时自动回退内置规则引擎，演示不中断。</div>
+            <div class="cfg-row"><label>决策引擎</label><select data-cfg="sys.llm.enabled"><option value="false">内置规则引擎（默认）</option><option value="true">大模型自主决策</option></select></div>
+            <div class="cfg-row"><label>API 地址</label><input type="text" data-cfg="sys.llm.endpoint" placeholder="https://api.openai.com/v1/chat/completions"></div>
+            <div class="cfg-row"><label>模型名</label><input type="text" data-cfg="sys.llm.model" placeholder="gpt-4o-mini"></div>
+            <div class="cfg-row"><label>API Key</label><input type="password" data-cfg="sys.llm.apiKey" placeholder="sk-..."></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">🧪 技能版本灰度</div>
+            <div class="cfg-row"><label>新版本灰度比例%</label><input type="number" data-cfg="sys.gray.ratio"> <span class="cs-note">（占位 · 新技能 v(N+1) 与 v(N) 对照验证后再全量）</span></div>
+          </div>
+          <div class="cfg-sec">
+            <div class="cs-title">📜 合规声明</div>
+            <div class="cs-note">历史记忆仅使用统计特征（投诉次数/赔付总额/信用分等），不回放具体案件内容；人身损害/食安/疑似欺诈等红线场景，线上必须强制转人工专家+法务，沙盒推演结果仅作策略参考。</div>
+          </div>
+        </div>
+      </div>
+      <div class="cfg-foot">
+        <span class="hint">配置即时生效；资金池/回合上限在下一次对练或谈判开始时应用。所有参数有默认值，可直接开始使用。</span>
+        <button class="pxbtn" id="cfgReset">↺ 恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>技能工厂闭环</b>：灌入场景 → 反贼发难 / 忠臣应对 / 内奸搅局 / 史官记录仲裁 → 蒸馏技能（命名+版本+描述）→ 加载体验 → 用户反馈回流沙箱 → 技能版本迭代。平等的 Multi-Agent 制衡，非 planner-executor 金字塔。
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================
+   像素精灵数据（16x20）
+===================================================== */
+const PALETTE = {
+  k:'#0d1120', r:'#e04a4a', y:'#ffd76e', f:'#f2cfa8', b:'#3b74f0', B:'#1d3fa0',
+  w:'#ffffff', g:'#a8b8d8', G:'#5f7195', n:'#2e2a3e', R:'#9c2a52',
+  o:'#f0912e', O:'#a85a10', e:'#14182a', q:'#46c8b0', Q:'#1f7a68'
+};
+const LOYAL_ROWS = [
+  ".......rr.......","......kyyk......",".....kyyyyk.....","....kyyyyyyk....",
+  "....kffffffk....","....kfkffkfk....","....kffffffk....",".....kffffk.....",
+  "..kkbbbbbbbbkk..","..kbbbbbbbbbbk..","..kbybwwwwbybk..","..kbbbwwwwbbbk..",
+  "..kbbbbbbbbbbk..","..kbbkyyyykbbk..","...kbbbbbbbbk...","...kBBk..kBBk...",
+  "...kBBk..kBBk...","...kkkk..kkkk...","................","................",
+];
+const SHIELD_ROWS = [".kkkkk.","kgggggk","kgwywgk","kgyyygk","kgwywgk",".kgggk.","..kgk..","...k..."];
+const REBEL_ROWS = [
+  "....k..kk..k....","....krrrrrrk....","...krrrrrrrrk...","...knnnnnnnnk...",
+  "..knknnnnnnknk..","....kffffffk....","....kfkffkfk....","....kffffffk....",
+  "....kfyffyfk....",".....kffffk.....","..kkrrrrrrrrkk..","..krrrrrrrrrrk..",
+  "..krnnrrrrnnrk..","..krrnnrrnnrrk..","..krrryyyyrrrk..","..krrrrrrrrrrk..",
+  "...krrrrrrrrk...","...kRRk..kRRk...","...kkkk..kkkk...","................",
+];
+const SPY_ROWS = [
+  ".......kk.......","......kook......",".....kooook.....","....kooooook....",
+  "....kooooook....","....kOeeeeOk....","....keyeeyek....","....kOeeeeOk....",
+  "..." + "kOOooooOOk" + "...",".." + "kk" + "oooooooo" + "kk" + "..",
+  ".." + "k" + "oooooooooo" + "k" + "..",".." + "k" + "oooooooooo" + "k" + "..",
+  "..koowwyywwook..","..koowwwwwwook..",".." + "k" + "oooooooooo" + "k" + "..",
+  "..." + "k" + "oo" + "yyyy" + "oo" + "k" + "...","..." + "k" + "oooooooo" + "k" + "...",
+  "...kOOk..kOOk...","...kkkk..kkkk...","................",
+];
+const HIST_ROWS = [
+  "......kkkk......",".....knnnnk.....","....knnnnnnk....","....kyyyyyyk....",
+  "....kffffffk....","....kfkffkfk....","....kffffffk....","....kfggggfk....",
+  "..kkqqqqqqqqkk..","..kqqqqqqqqqqk..","..kq"+"wwwwwwww"+"qk..","..kqwwkkkkwwqk..",
+  "..kq"+"wwwwwwww"+"qk..","..kqqqqqqqqqqk..","..kqqkyyyykqqk..","...kqqqqqqqqk...",
+  "...kQQk..kQQk...","...kQQk..kQQk...","...kkkk..kkkk...","................",
+];
+
+/* =====================================================
+   画布引擎
+===================================================== */
+const cv = document.createElement('canvas'); cv.width = 384; cv.height = 216;
+const ctx = cv.getContext('2d');
+const W = 384, H = 216;
+const stageWrap = document.createElement('div');
+stageWrap.className = 'stage-wrap';
+const scanDiv = document.createElement('div'); scanDiv.className = 'scanlines';
+const fxLayer = document.createElement('div'); fxLayer.className = 'fx-layer';
+stageWrap.appendChild(cv); stageWrap.appendChild(scanDiv); stageWrap.appendChild(fxLayer);
+
+const actors = {
+  rebel: { rows:REBEL_ROWS, x:72,  footY:154, scale:3, ox:0, oy:0, phase:0, hidden:false },
+  hist:  { rows:HIST_ROWS,  x:146, footY:122, scale:3, ox:0, oy:0, phase:3, hidden:false, dim:0.22 },
+  spy:   { rows:SPY_ROWS,   x:238, footY:122, scale:3, ox:0, oy:0, phase:4, hidden:false, dim:0.22 },
+  loyal: { rows:LOYAL_ROWS, x:300, footY:154, scale:3, ox:0, oy:0, phase:2, hidden:false },
+};
+let effects = [], particles = [], lastTime = 0;
+
+function shade(hex, k){
+  const n = parseInt(hex.slice(1),16);
+  const r=Math.round(((n>>16)&255)*(1-k)), g=Math.round(((n>>8)&255)*(1-k)), b=Math.round((n&255)*(1-k));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+function drawSprite(rows, x, y, scale, opts){
+  opts = opts||{};
+  const w = 16*scale, h = rows.length*scale;
+  const x0 = Math.round(x - w/2), y0 = Math.round(y - h);
+  for(let r=0;r<rows.length;r++){
+    const row = rows[r];
+    for(let c=0;c<row.length;c++){
+      const ch = row[c];
+      if(ch === '.') continue;
+      let col = PALETTE[ch];
+      if(!col) continue;
+      if(opts.dim) col = shade(col, opts.dim);
+      ctx.fillStyle = col;
+      ctx.fillRect(x0 + c*scale, y0 + r*scale, scale, scale);
+    }
+  }
+}
+function spawnParticles(x, y, n, color, opts){
+  opts = opts||{};
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = (opts.speed||1) * (0.4 + Math.random());
+    particles.push({ x:x, y:y, vx:Math.cos(a)*sp+(opts.vx||0), vy:Math.sin(a)*sp+(opts.vy||0),
+      life:0, maxLife:opts.life||600+Math.random()*300, color:color, size:opts.size||2 });
+  }
+}
+function addEffect(e){ e.t = 0; effects.push(e); }
+function drawBg(now){
+  const wallGrad = ctx.createLinearGradient(0,0,0,150);
+  wallGrad.addColorStop(0,'#1a2138'); wallGrad.addColorStop(1,'#232c4c');
+  ctx.fillStyle = wallGrad; ctx.fillRect(0,0,W,150);
+  ctx.fillStyle = '#2a3454';
+  for(let x=24;x<W;x+=48){ ctx.fillRect(x, 10, 2, 130); }
+  ctx.fillStyle = '#7e1f1f'; ctx.fillRect(166, 6, 52, 34);
+  ctx.fillStyle = '#a8302a'; ctx.fillRect(169, 9, 46, 28);
+  ctx.strokeStyle = '#ffd76e'; ctx.lineWidth = 2; ctx.strokeRect(170, 10, 44, 26);
+  ctx.fillStyle = '#ffd76e';
+  ctx.font = '22px Zpix, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('和', 192, 24);
+  for(const px of [10, 356]){
+    ctx.fillStyle = '#6e2430'; ctx.fillRect(px, 8, 18, 142);
+    ctx.fillStyle = '#8c3140'; ctx.fillRect(px+3, 8, 6, 142);
+    ctx.fillStyle = '#4a1820'; ctx.fillRect(px-2, 4, 22, 8); ctx.fillRect(px-2, 146, 22, 8);
+    const fl = Math.sin(now/90 + px)*1.5;
+    ctx.fillStyle = '#3a2030'; ctx.fillRect(px+3, 40, 12, 6);
+    ctx.fillStyle = '#ff9a3d'; ctx.fillRect(px+6, 34+fl, 6, 6);
+    ctx.fillStyle = '#ffd76e'; ctx.fillRect(px+7, 36+fl, 4, 4);
+  }
+  ctx.fillStyle = '#2b3352'; ctx.fillRect(0, 150, W, H-150);
+  const t1 = '#2b3352', t2 = '#242b47';
+  for(let ty=150; ty<H; ty+=11){
+    const off = ((ty-150)/11)%2 === 0 ? 0 : 11;
+    for(let tx=-11; tx<W; tx+=22){
+      ctx.fillStyle = ((tx+off)/11)%2===0 ? t1 : t2;
+      ctx.fillRect(tx+off, ty, 22, 11);
+    }
+  }
+  ctx.fillStyle = '#0a0d18'; ctx.fillRect(0, 150, W, 2);
+}
+function drawPlates(){
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  drawPlate(actors.rebel, '反贼 · 攻势', [[G.pressure/100, '#ff5c8a']], '#ff8cae');
+  drawPlate(actors.loyal, '忠臣 · 现金池/成交概率', [
+    [ (G.budget-G.spent)/G.budget, '#4f8cff' ], [ G.resolution/100, '#ffd76e' ]
+  ], '#9db9ff');
+  drawPlate(actors.spy, '内奸 · 均衡信号', [[G.equilibrium/100, '#ff9a3d']], '#ffb377');
+  const prog = G.sandbox && G.sandbox.totalTurns ? G.sandbox.turnIdx/G.sandbox.totalTurns : 0;
+  drawPlate(actors.hist, '史官 · 对练进度', [[prog, '#46c8b0']], '#7fe6d5');
+}
+function drawPlate(a, label, bars, labelColor){
+  const cx = Math.round(a.x + a.ox), base = a.footY + 4;
+  ctx.font = '12px Zpix, monospace';
+  ctx.fillStyle = '#0a0d1888';
+  const tw = ctx.measureText(label).width;
+  ctx.fillRect(cx-tw/2-2, base+1, tw+4, 13);
+  ctx.fillStyle = labelColor;
+  ctx.fillText(label, cx, base+2);
+  bars.forEach(function(b, i){
+    const by = base + 17 + i*6;
+    ctx.fillStyle = '#0a0d18'; ctx.fillRect(cx-20, by, 40, 4);
+    ctx.fillStyle = '#454f78'; ctx.fillRect(cx-19, by+1, 38, 2);
+    ctx.fillStyle = b[1]; ctx.fillRect(cx-19, by+1, Math.max(0,Math.min(38, 38*b[0])), 2);
+  });
+}
+function loop(now){
+  const dt = Math.min(50, now - lastTime || 16); lastTime = now;
+  ctx.clearRect(0,0,W,H);
+  drawBg(now);
+  const order = ['hist','spy','rebel','loyal'];
+  for(const key of order){
+    const a = actors[key];
+    if(a.hidden) continue;
+    const bob = Math.round(Math.sin(now/320 + a.phase)*1.6);
+    const x = a.x + a.ox, y = a.footY + a.oy + bob;
+    if(key === 'loyal') drawSprite(SHIELD_ROWS, x-26, y-8+bob*0.5, 3, {dim:a.dim});
+    drawSprite(a.rows, x, y, 3, {dim:a.dim});
+  }
+  effects = effects.filter(function(e){
+    e.t += dt;
+    const p = Math.min(1, e.t/e.dur);
+    if(e.type === 'slash'){
+      const L = 8 + p*22;
+      ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(-0.7);
+      ctx.fillStyle = p<0.5 ? '#ffffff' : '#ffd76e';
+      ctx.fillRect(-L/2, -1, L, 3);
+      ctx.rotate(1.4); ctx.globalAlpha = 1-p;
+      ctx.fillRect(-L/2, -1, L, 3); ctx.restore();
+    } else if(e.type === 'flash'){
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.22*(1-p)) + ')';
+      ctx.fillRect(0,0,W,H);
+    } else if(e.type === 'ring'){
+      ctx.strokeStyle = e.color; ctx.lineWidth = 2; ctx.globalAlpha = 1-p;
+      const R = 4 + p*18; ctx.strokeRect(e.x-R, e.y-R, R*2, R*2); ctx.globalAlpha = 1;
+    } else if(e.type === 'proj'){
+      const x = e.x1 + (e.x2-e.x1)*p, y = e.y1 + (e.y2-e.y1)*p - Math.sin(p*Math.PI)*24;
+      ctx.fillStyle = e.color; ctx.fillRect(x-2, y-2, 5, 5);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x-1, y-1, 3, 3);
+      if(Math.random()<0.6) particles.push({x:x, y:y, vx:(Math.random()-0.5)*0.4, vy:0.3, life:0, maxLife:300, color:e.color, size:2});
+    }
+    return e.t < e.dur;
+  });
+  particles = particles.filter(function(pt){
+    pt.life += dt; pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.02;
+    ctx.globalAlpha = Math.max(0, 1 - pt.life/pt.maxLife);
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(Math.round(pt.x), Math.round(pt.y), pt.size, pt.size);
+    ctx.globalAlpha = 1;
+    return pt.life < pt.maxLife;
+  });
+  drawPlates();
+  setTimeout(function(){ loop(performance.now()); }, 16);
+}
+setTimeout(function(){ loop(performance.now()); }, 16);
+
+/* =====================================================
+   DOM 特效层
+===================================================== */
+function pct(v){ return (v/W*100).toFixed(2)+'%'; }
+function popup(x, y, text, cls, small){
+  const d = document.createElement('div');
+  d.className = 'pop ' + (cls||'') + (small?' small':'');
+  d.textContent = text;
+  d.style.left = pct(x); d.style.top = pct(y);
+  fxLayer.appendChild(d);
+  setTimeout(function(){ d.remove(); }, 1200);
+}
+function speech(actor, text, ms){
+  const a = actors[actor];
+  const d = document.createElement('div');
+  d.className = 'speech'; d.textContent = text;
+  d.style.left = pct(a.x + a.ox); d.style.top = pct(a.footY - 66);
+  fxLayer.appendChild(d);
+  setTimeout(function(){ d.style.transition='opacity .2s'; d.style.opacity='0'; }, ms||1600);
+  setTimeout(function(){ d.remove(); }, (ms||1600)+250);
+}
+function turnBanner(text, cls){
+  const d = document.createElement('div');
+  d.className = 'turn-banner' + (cls?' '+cls:'');
+  d.textContent = text;
+  fxLayer.appendChild(d);
+  setTimeout(function(){ d.remove(); }, 1600);
+}
+function shake(){
+  stageWrap.classList.remove('shake');
+  void stageWrap.offsetWidth;
+  stageWrap.classList.add('shake');
+}
+
+/* =====================================================
+   RPG 对话框（共享，可移动）
+===================================================== */
+const rpgBox = document.createElement('div');
+rpgBox.className = 'rpg-dialog';
+rpgBox.innerHTML = '<div class="dlg-name n-sys" id="dlgName">【系统】</div><div class="dlg-text" id="dlgText">沙盒待机中。</div>';
+function dlgNameEl(){ return rpgBox.querySelector('#dlgName'); }
+function dlgTextEl(){ return rpgBox.querySelector('#dlgText'); }
+let dlgChain = Promise.resolve();
+let typingMs = 24;
+function say(name, cls, html){
+  dlgChain = dlgChain.then(function(){ return new Promise(function(resolve){
+    dlgNameEl().textContent = name;
+    dlgNameEl().className = 'dlg-name ' + cls;
+    dlgTextEl().innerHTML = '';
+    let i = 0;
+    const plain = html.replace(/<[^>]+>/g,'');
+    const timer = setInterval(function(){
+      i += 2;
+      if(i < plain.length){ dlgTextEl().textContent = plain.slice(0, i); }
+      else {
+        dlgTextEl().innerHTML = html;
+        clearInterval(timer);
+        setTimeout(resolve, 420);
+      }
+    }, typingMs);
+  }); });
+  return dlgChain;
+}
+const sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
+
+/* =====================================================
+   状态与技能
+===================================================== */
+const SKILLS = [
+  { id:'comfort', name:'安抚道歉', cost:0,    power:10, desc:'共情+加急登记' },
+  { id:'close',   name:'确认成交·收尾', cost:0, power:12, desc:'一致后收尾·不重复报价' },
+  { id:'reject',  name:'合规拒绝·举证核查', cost:0, power:8, desc:'证据不足守住底线' },
+  { id:'coupon',  name:'补偿优惠券', cost:60,  power:18, desc:'¥200 权益补偿' },
+  { id:'expert',  name:'专家通道', cost:150,  power:26, desc:'资深专家1v1' },
+  { id:'partial', name:'部分赔付', cost:800,  power:32, desc:'损失60%赔付' },
+  { id:'full',    name:'全额赔付', cost:3000, power:50, desc:'按举证全赔' },
+];
+const DEFAULT_CFG = {
+  scene: {
+    persona: 'auto',
+    crm: { complaints: 3, payoutTotal: 1200, memberLevel: '金卡', creditScore: 88 },
+    difficulty: 'auto', evidenceStrict: 'standard',
+    dataSource: { enabled: false, api: '', dataset: '' },
+  },
+  sandbox: {
+    pools: { cash: 6000, coupon: 2000, service: 1000 },
+    exchange: { couponRate: 3, serviceRate: 10 },
+    targets: { '情理攻势': 85, '合规威胁': 80, '舆论威胁': 75, '法律威胁': 60, '狮子大开口': 50 },
+    balance: 'balanced', balanceWeight: 50,
+    skills: {
+      comfort: { on: true }, reject: { on: true }, close: { on: true },
+      coupon: { on: true, cost: 60 }, expert: { on: true, cost: 150 },
+      partial: { on: true, cost: 800 }, full: { on: true, cost: 3000 },
+    },
+    spy: { budget: 3, mode: 'auto' },
+    depth: { maxRounds: 12, convergeEq: 50 },
+  },
+  exp: {
+    style: 'professional', pace: 'steady', dualRun: true,
+    humanHandoff: { predFloor: 40, lowPredRounds: 2, amountLimit: 50000,
+      redlines: ['人身损害', '食品安全', '疑似欺诈', '涉未成年人', '大V舆情'] },
+  },
+  sys: {
+    feedbackLoop: 'manual', gray: { ratio: 20 },
+    llm: {
+      enabled: false,
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-4o-mini',
+      apiKey: '',
+      timeout: 8,
+    },
+  },
+};
+function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
+function skillCost(sk){
+  const c = G.cfg.sandbox.skills[sk.id];
+  return c && typeof c.cost === 'number' ? c.cost : sk.cost;
+}
+function skillOn(sk){
+  const c = G.cfg.sandbox.skills[sk.id];
+  return !c || c.on !== false;
+}
+const POOL_OF = { coupon: 'coupon', expert: 'service', partial: 'cash', full: 'cash' };
+const CONSUME_FIXED = { coupon: 200, expert: 30 }; // 券面额¥ / 工时分钟
+function poolConsume(sk){
+  if(!POOL_OF[sk.id]) return null;
+  if(CONSUME_FIXED[sk.id] != null) return CONSUME_FIXED[sk.id];
+  return effCost(sk);
+}
+function poolCanAfford(sk){
+  const c = poolConsume(sk);
+  return c == null || (G.pools[POOL_OF[sk.id]] || 0) >= c;
+}
+function poolPay(sk){
+  const c = poolConsume(sk);
+  if(c != null && POOL_OF[sk.id]){
+    G.pools[POOL_OF[sk.id]] -= c;
+    G.poolSpent[POOL_OF[sk.id]] += c;
+  }
+}
+function effectivePersona(){
+  const c = G.cfg.scene.crm;
+  if(c.complaints >= 5) return '多次维权老客';
+  if(c.creditScore < 60) return '职业敲诈';
+  const p = G.cfg.scene.persona;
+  if(p !== 'auto') return p;
+  return '理性协商';
+}
+/* 文本推断人格（轻量规则，展示结论 + hover 依据） */
+function inferPersonaFromText(text){
+  if(/律师|判例|民法典|依法|法条|诉讼|消法/.test(text)) return '专业索赔';
+  if((text.match(/[!！]/g)||[]).length >= 3) return '情绪主导';
+  if(EV_WEAK.test(text) && /\d+万|[56789]\d{3}/.test(text)) return '职业敲诈';
+  if(/又投诉|上次|第.次|每次都/.test(text)) return '多次维权老客';
+  return '理性协商';
+}
+function personaReason(text){
+  if(/律师|判例|民法典|依法|法条|诉讼|消法/.test(text)) return '消息含法律类词汇';
+  if((text.match(/[!！]/g)||[]).length >= 3) return '感叹号≥3个';
+  if(EV_WEAK.test(text) && /\d+万|[56789]\d{3}/.test(text)) return '弱证据+高额索赔特征';
+  if(/又投诉|上次|第.次|每次都/.test(text)) return '含多次维权表述';
+  return '无特殊信号 → 默认理性';
+}
+/* 场景级生效值：难度/证据严格度（场景标签 ＞ 全局默认），第一步展示与引擎共用 */
+function effectiveDiffBase(sc){ return (sc && sc.difficulty) ? sc.difficulty : G.cfg.scene.difficulty; }
+function effectiveLevel(sc, rawLevel){
+  const d = effectiveDiffBase(sc);
+  return (d !== 'auto' && rawLevel) ? +d : rawLevel;
+}
+function effectiveEvStrict(sc){ return (sc && sc.evidenceStrict) ? sc.evidenceStrict : G.cfg.scene.evidenceStrict; }
+function applyEvStrict(ev, strict, text){
+  if(strict === 'loose' && ev === 'neutral') return 'strong';
+  if(strict === 'strict' && ev === 'strong' && !HARM_RE.test(text)) return 'neutral';
+  return ev;
+}
+/* 场景级人格解析：场景标签 ＞ 场景CRM ＞ 全局CRM ＞ 全局手选 ＞ 文本推断 */
+function effectivePersonaFor(sc, text){
+  if(sc && sc.persona) return { p: sc.persona, src: '场景标签' };
+  if(sc && sc.crm && (sc.crm.complaints || sc.crm.creditScore)){
+    if(sc.crm.complaints >= 5) return { p: '多次维权老客', src: '场景CRM特征' };
+    if(sc.crm.creditScore && sc.crm.creditScore < 60) return { p: '职业敲诈', src: '场景CRM特征' };
+  }
+  const gc = G.cfg.scene.crm;
+  if(gc.complaints >= 5) return { p: '多次维权老客', src: '全局CRM特征' };
+  if(gc.creditScore < 60) return { p: '职业敲诈', src: '全局CRM特征' };
+  if(G.cfg.scene.persona !== 'auto') return { p: G.cfg.scene.persona, src: '全局默认' };
+  return { p: inferPersonaFromText(text || ''), src: '文本推断' };
+}
+function predictV2(){ // 模拟 LLM 判读（接口占位）：v1 基准 + 上下文因子
+  const base = G.resolution;
+  const ctx = (G.evidence === 'strong' ? 4 : (G.evidence === 'weak' ? -6 : 0))
+            + (G.pressure > 70 ? -5 : 0) + (G.round > 5 ? 3 : 0) + (G.harm ? 2 : 0);
+  const noise = Math.sin(G.round * 7.3) * 3;
+  return Math.max(0, Math.min(100, Math.round(base + ctx + noise)));
+}
+function targetOf(type){
+  return (G.cfg.sandbox.targets && G.cfg.sandbox.targets[type]) || 85;
+}
+function redlineHits(text, info){
+  const rl = G.cfg.exp.humanHandoff.redlines || [];
+  const hits = [];
+  if(rl.includes('人身损害') && HARM_RE.test(text)) hits.push('人身损害');
+  if(rl.includes('食品安全') && /食品|吃出|外卖|异物|中毒|过敏原|餐/.test(text)) hits.push('食品安全');
+  if(rl.includes('疑似欺诈') && info.evidence === 'weak' && info.gain >= 20) hits.push('疑似欺诈');
+  if(rl.includes('涉未成年人') && /未成年|小孩|儿童|我儿子|我女儿|孩子|13岁|14岁|15岁|16岁|17岁/.test(text)) hits.push('涉未成年人');
+  if(rl.includes('大V舆情') && /记者|博主|粉丝|媒体|热搜|直播/.test(text)) hits.push('大V舆情');
+  return hits;
+}
+
+let G;
+function allSkills(){ return SKILLS.concat(G ? G.extraSkills : []); }
+function freshSkillStatus(){
+  const s = {};
+  allSkills().forEach(function(sk){ s[sk.id] = { mult:1, disabled:0 }; });
+  return s;
+}
+function initState(){
+  G = {
+    round:0, budget:6000, spent:0, resolution:30, pressure:15, equilibrium:0,
+    stableRounds:0, history:[], skillStatus:null, busy:false, scenarioLabel:'待机',
+    interventions:0, spyBudget:3, converged:false, celebrated:false,
+    evidence:'neutral', harm:false, lastSkill:null, lastOfferSkill:null, dealClosed:false, lastAttackType:null, attackMemory:{}, lastRoundCost:0,
+    scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
+    replyHistory:{}, recentReplies:[], pendingSkill:null,
+    cfg: deepCopy(DEFAULT_CFG),
+    pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
+    belowTargetStreak: 0, forceUpgrade: false, currentTarget: 85, v2pred: 30, redlineFlagged: {},
+    sandbox:{ running:false, paused:false, turnIdx:0, totalTurns:0, roundLog:[], stop:null, traces: [],
+              useCases:[], feedback:null, stillStreak:0, lastSkill:null },
+  };
+  G.skillStatus = freshSkillStatus();
+}
+initState();
+function resetBattle(){
+  G.round=0; G.spent=0; G.resolution=30; G.pressure=15; G.equilibrium=0;
+  G.stableRounds=0; G.converged=false; G.celebrated=false; G.interventions=0;
+  G.skillStatus=freshSkillStatus(); G.lastSkill=null; G.history=[]; G.attackMemory={};
+  G.evidence='neutral'; G.harm=false; G.lastRoundCost=0; G.scenarioLabel='待机';
+  G.dealClosed=false; G.lastOfferSkill=null;
+  G.replyHistory={}; G.recentReplies=[];
+  G.belowTargetStreak=0; G.forceUpgrade=false; G.redlineFlagged={};
+  const persona = effectivePersona();
+  G.pools = {
+    cash: Math.round(G.cfg.sandbox.pools.cash * (persona === '多次维权老客' ? 1.5 : 1)),
+    coupon: G.cfg.sandbox.pools.coupon,
+    service: G.cfg.sandbox.pools.service,
+  };
+  G.budget = G.pools.cash;
+  G.poolSpent = { cash: 0, coupon: 0, service: 0 };
+  G.spyBudget = G.cfg.sandbox.spy.budget;
+  Object.keys(actors).forEach(function(k){ actors[k].ox=0; actors[k].oy=0; });
+  actors.spy.dim = 0.22; actors.hist.dim = 0.22;
+  effects = []; particles = []; fxLayer.innerHTML = '';
+  renderHud(); renderArena(); renderSkills();
+}
+function effCost(sk){ return Math.round(skillCost(sk) * (G.skillStatus[sk.id] ? G.skillStatus[sk.id].mult : 1)); }
+function isDisabled(sk){ return G.skillStatus[sk.id] && G.skillStatus[sk.id].disabled > 0; }
+
+/* =====================================================
+   消息分析
+===================================================== */
+const ATTACK_TYPES = { '情理攻势':10, '合规威胁':16, '舆论威胁':15, '法律威胁':17, '狮子大开口':18 };
+const EV_STRONG = /视频|录音|截图|照片|发票|底单|单据|票据|报告|鉴定|认定书|判例|检测|合同|监控|录屏|工单号|SLA|保价|医院|就医|住院|诊断|骨折|送医|过敏|皮炎|肠胃炎|心悸|副作用|吃出|异物|蟑螂|头发|塑料片|划破|食品安全法|消法|民法典|碎了|破损|磕|划痕|漏液|跑酒|化冻|变质|鼓包|色差|钻绒|不制冷|故障|维权群|政采|代位|消防|信访|消协|留样|医药费|误工费/;
+const EV_WEAK = /空包裹|调包|二手|穿过|吊牌|精神损失|心理创伤|通融|体面|清净|删差评|差评删|十个号|说了算|别管发票|挂二手|毁了我的人生/;
+const HARM_RE = /住院|医院|骨折|医药费|就医|诊断|中毒|过敏|皮炎|划破|送医|副作用|心悸|肠胃炎|受伤/;
+/* 共识达成检测：用户确认同意 → 触发成交收尾，而非新一轮报价 */
+function isAgreement(text){
+  const t = String(text).trim();
+  if(t.length > 24) return false;
+  if(/[不没别再怎][行好可同意接受]|不满意|不同意|不接受|再想想|再考虑|再谈/.test(t)) return false;
+  if(/但|不过|然而|还要|除非|另外|还是/.test(t)) return false;
+  const stripped = t.replace(/[。！!，,~～\s]/g, '');
+  return /^(可以|行|好|嗯|哦|OK|ok|Ok|同意|接受|成交|没问题|就这样|准了|认了|那就这样|就这么办|按这个|我同意|我接受|我认|行吧|可以了|成交吧)/.test(t)
+      || /(可以|同意|接受|成交|没问题|就这样|办吧|定了)$/.test(stripped);
+}
+const CLOSE_VARIANTS = [
+  function(terms){ return '好的，方案确认：' + terms + '。马上为您走流程，有任何进展第一时间同步您——感谢您的耐心沟通，本次谈判到此收尾。'; },
+  function(terms){ return '收到，那就按这个方案执行：' + terms + '。我这边立刻安排落地，进度随时同步。谢谢您的理解，这次就先到这里。'; },
+  function(terms){ return '确认无误，方案按「' + terms + '」推进。我不再重复报价了，接下来专心把事办好。感谢沟通，本次谈判到此收尾。'; },
+];
+const RE_CONFIRM_VARIANTS = [
+  '本方案已确认成交并进入执行流程。如果您有新的问题或诉求，请直接描述，我们马上处理。',
+  '方案已定、流程已启动。您若还有新的问题，直接告诉我就行，我会接着帮您处理。',
+  '这个案子已经进入执行阶段了。有新情况随时说，我们继续为您跟进。',
+];
+function closeReplyText(){
+  const s = G.lastOfferSkill;
+  let terms = '最终赔付方案';
+  if(s && TERMS_TEXT[s.id]) terms = TERMS_TEXT[s.id];
+  else if(s && s.pathDesc) terms = '按〔' + s.name + '〕执行：' + s.pathDesc;
+  const idx = (G.round + (G.recentReplies ? G.recentReplies.length : 0)) % CLOSE_VARIANTS.length;
+  return CLOSE_VARIANTS[idx](terms);
+}
+const TERMS_TEXT = {
+  comfort: '已加急登记，2 小时内专人回电跟进',
+  reject:  '按举证要求核查，24 小时内回复结论',
+  coupon:  '¥200 补偿权益已发放，问题同步加急处理',
+  expert:  '升级专家通道，资深专家 1 对 1 跟进，24 小时内给完整方案',
+  partial: '按举证损失 60% 赔付，今日提交、T+1 到账',
+  full:    '按举证全额赔付并附 ¥200 权益券，今日提交、T+1 到账',
+};
+function evidenceOf(text){
+  if(EV_WEAK.test(text)) return 'weak';
+  if(EV_STRONG.test(text)) return 'strong';
+  return 'neutral';
+}
+function analyze(text){
+  let type = '情理攻势', sev = 0;
+  if(/12315|投诉|工商|监管|举报|市场监督管理局|药监|卫健/.test(text)){ type='合规威胁'; sev+=3; }
+  else if(/曝光|媒体|记者|热搜|小红书|微博|抖音|差评|挂|直播/.test(text)){ type='舆论威胁'; sev+=3; }
+  else if(/律师|起诉|诉讼|法院|仲裁|律师函|判例|和解协议|撤诉|民法典|法庭|致函/.test(text)){ type='法律威胁'; sev+=3; }
+  const m = text.match(/(\d+(?:\.\d+)?)\s*万/);
+  if(m || /[56789]\d{3}|\d{4,}/.test(text)){
+    if(type==='情理攻势') type='狮子大开口';
+    sev += m ? Math.min(5, 2+Math.floor(parseFloat(m[1])/2)) : 2;
+  }
+  sev += Math.min(3, (text.match(/[!！?？]/g)||[]).length);
+  sev += Math.min(2, Math.floor(text.length/60));
+  const level = Math.max(1, Math.min(3, 1 + Math.floor(sev/3)));
+  const gain = Math.min(34, ATTACK_TYPES[type] + level*3 + sev);
+  const quote = text.length > 26 ? text.slice(0,26)+'…' : text;
+  return { type:type, level:level, gain:gain, quote:quote, evidence: evidenceOf(text), harm: HARM_RE.test(text) };
+}
+
+/* =====================================================
+   决策思考追踪（对练全记录数据源）
+===================================================== */
+let SKILL_TRACE = null;
+const TRACE_RX = {
+  '合规威胁': /12315|投诉|工商|监管|举报|市场监督管理局|药监|卫健/g,
+  '舆论威胁': /曝光|媒体|记者|热搜|小红书|微博|抖音|差评|挂|直播/g,
+  '法律威胁': /律师|起诉|诉讼|法院|仲裁|律师函|判例|和解协议|撤诉|民法典|法庭|致函/g,
+};
+function explainAnalyze(text, info){
+  const lines = [];
+  const rx = TRACE_RX[info.type];
+  const hits = rx ? (text.match(rx) || []) : [];
+  if(hits.length) lines.push('关键词命中：「' + hits.slice(0,3).join('、') + '」→ ' + info.type + '，严重度 +3');
+  else lines.push('未命中威胁词 → 类型：' + info.type + (info.type==='狮子大开口' ? '（由大额金额触发）' : '（默认/金额判定）'));
+  const m = text.match(/(\d+(?:\.\d+)?)\s*万/);
+  if(m || /[56789]\d{3}|\d{4,}/.test(text)){
+    lines.push('金额信号：' + (m ? '「' + m[1] + '万」' : '大额数字') + ' → 狮子大开口加权' + (info.type==='狮子大开口' ? '' : '（本型已被威胁词占据，作为严重度累加）'));
+  }
+  const ex = Math.min(3, (text.match(/[!！?？]/g)||[]).length);
+  if(ex) lines.push('情绪信号：感叹/问号 ×' + ex + ' → 严重度 +' + ex);
+  const ln = Math.min(2, Math.floor(text.length/60));
+  if(ln) lines.push('文本长度：' + text.length + ' 字 → 严重度 +' + ln);
+  lines.push('证据快照：' + info.evidence + (info.harm ? ' · ⚠ 人身损害标记' : ''));
+  return lines;
+}
+function escT(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function renderTraceCard(tr){
+  const body = $('traceBody'); if(!body) return;
+  const empty = body.querySelector('.trace-empty'); if(empty) empty.remove();
+  const sec = function(cls, title, lines){
+    return '<div class="tc-sec ' + cls + '"><b>' + title + '</b>' +
+      lines.map(function(l){ return '<div>▸ ' + l + '</div>'; }).join('') + '</div>';
+  };
+  const card = document.createElement('div');
+  card.className = 'trace-card';
+  card.innerHTML =
+    '<div class="tc-head">R' + tr.r + ' · ' + tr.type + ' Lv.' + tr.lv + ' · 攻势+' + tr.gain +
+      '<span class="tc-src">' + (tr.source==='sandbox' ? '灌入剧本回放' : 'C端实时消息') + '</span></div>' +
+    '<div class="tc-sec tc-dlg"><b>📜 对练原文</b>' +
+      '<div class="tc-line rebel-line">反贼：「' + escT(tr.text) + '」</div>' +
+      (tr.reply ? '<div class="tc-line loyal-line">忠臣：「' + escT(tr.reply) + '」</div>' : '') +
+    '</div>' +
+    sec('tc-rebel', '🗡 反贼 · 情景模拟器 思考', tr.rebel.lines) +
+    sec('tc-loyal', '🛡 忠臣 · 内部决策思考', tr.loyal.lines) +
+    sec('tc-spy', '🎭 内奸 · 均衡破坏者 思考', tr.spy.lines) +
+    sec('tc-hist', '✒ 仲裁史官 · 研判', tr.hist.lines);
+  body.appendChild(card);
+  G.sandbox.traces.push(tr);
+  $('traceCount').textContent = G.sandbox.traces.length + ' 回合';
+  if($('traceFold').classList.contains('open')) body.scrollTop = body.scrollHeight;
+}
+
+/* =====================================================
+   忠臣决策
+===================================================== */
+function chooseSkill(gain, evidence, type, level, harm){
+  const T = SKILL_TRACE;
+  const log = function(msg){ if(T) T.push(msg); };
+  const byId = function(id){ return allSkills().find(function(s){ return s.id===id; }); };
+  if(evidence === 'weak' && gain >= 20){
+    log('决策① 反欺诈线：弱证据 + 要价 ' + gain + ' ≥ 20 → 〔合规拒绝·举证核查〕，守住底线要求举证');
+    return byId('reject');
+  }
+  if(type === '法律威胁' && level === 3 && evidence === 'strong'){
+    const fullSk = byId('full');
+    if(!isDisabled(fullSk) && effCost(fullSk) <= G.budget - G.spent){
+      log('决策② 法律线：法律威胁 Lv.3 + 强证据 → 〔全额赔付〕（和解成本低于应诉，预算 ' + fmtMoney(effCost(fullSk)) + ' ≤ 剩余 ' + fmtMoney(G.budget-G.spent) + ' ✓）');
+      return fullSk;
+    }
+    log('决策② 法律线：命中法律高危条件，但全额赔付预算不足/被冻结 → 向下兼容常规决策树');
+  }
+  // 已加载蒸馏技能：场景类型匹配 → 优先体验
+  const matched = G.extraSkills.find(function(s){ return s.matchType===type && !isDisabled(s) && effCost(s) <= G.budget - G.spent; });
+  if(matched){
+    log('决策③ 蒸馏技能匹配：〔' + matched.name + ' v' + matched.version + '〕针对「' + type + '」场景 → 优先启用（沙箱验证过的打法，成本 ' + fmtMoney(effCost(matched)) + '）');
+    return matched;
+  }
+  const minPower = (evidence === 'strong' && harm) ? 32 : 0;
+  if(minPower) log('决策③ 伤害下限：强证据 + 人身损害 → 技能力度下限 = P32（〔部分赔付〕起步，医药费必须覆盖）');
+  // 节奏配置：激进让步 → 首回合直接上实质方案（力度≥P26）
+  if(G.cfg.exp.pace === 'aggressive' && G.round === 1){
+    const strong = allSkills().filter(function(sk){ return skillOn(sk) && !isDisabled(sk) && poolCanAfford(sk) && effCost(sk) <= G.budget - G.spent && sk.power >= 26; });
+    if(strong.length){
+      strong.sort(function(a,b){ return effCost(a)-effCost(b); });
+      log('决策③·节奏：激进让步模式 → 首回合直接出实质方案 → 〔' + strong[0].name + '〕');
+      return strong[0];
+    }
+  }
+  let usable = allSkills().filter(function(sk){ return skillOn(sk) && !isDisabled(sk) && poolCanAfford(sk) && effCost(sk) <= G.budget - G.spent && sk.power >= minPower; });
+  if(!usable.length) usable = allSkills().filter(function(sk){ return skillOn(sk) && !isDisabled(sk) && poolCanAfford(sk) && effCost(sk) <= G.budget - G.spent; });
+  if(!usable.length){
+    log('决策④ 预算枯竭：可用池为空 → 兜底〔安抚道歉〕零成本硬抗');
+    return SKILLS[0];
+  }
+  log('决策④ 可用池（' + usable.length + ' 项，未冻结 ∧ 可负担' + (minPower ? ' ∧ 力度≥P' + minPower : '') + '）：' + usable.map(function(s){ return s.name; }).join(' / '));
+  const enough = usable.filter(function(sk){ return sk.power >= gain*0.85; });
+  let pool = enough.length ? enough : [usable.reduce(function(a,b){ return b.power>a.power?b:a; })];
+  if(enough.length){
+    pool = pool.slice().sort(function(a,b){ return effCost(a)-effCost(b); });
+    log('决策⑤ 覆盖贪心：需力度 ≥ ' + (gain*0.85).toFixed(1) + ' → 覆盖池 [' + enough.map(function(s){ return s.name; }).join('、') + ']，取成本最低 → 〔' + pool[0].name + '〕');
+  } else {
+    log('决策⑤ 兜底：覆盖池为空（最高力度 ' + pool[0].power + ' < ' + (gain*0.85).toFixed(1) + '）→ 取可用最强硬抗 → 〔' + pool[0].name + '〕');
+  }
+  let pick = pool[0];
+  if(pool.length>1 && pick.id===(G.lastSkill&&G.lastSkill.id) && Math.random()<0.35){
+    pick = pool[1];
+    log('决策⑥ 换招规避：〔' + pool[0].name + '〕与上轮同招（会被反贼记忆克制）→ 35% 概率换次优 → 〔' + pick.name + '〕');
+  }
+  // 换策略：连续未达标触发 → 升档最强可用
+  if(G.forceUpgrade){
+    G.forceUpgrade = false;
+    const strongest = usable.slice().sort(function(a,b){ return b.power-a.power; })[0];
+    if(strongest && strongest.id !== pick.id){
+      log('决策⑦ 换策略：成交概率连续未达标 → 升档最强可用 → 〔' + strongest.name + '〕');
+      pick = strongest;
+    }
+  }
+  log('预算校验：' + fmtMoney(effCost(pick)) + ' ≤ 剩余 ' + fmtMoney(G.budget - G.spent) + ' ✓ → 执行〔' + pick.name + '〕');
+  return pick;
+}
+
+/* =====================================================
+   大模型自主决策层（OpenAI 兼容 / 离线规则回退）
+   体验环节：LLM 自行判断阶段 + 从全部可用技能（含沙箱蒸馏新增）中选择，
+   并生成贴合用户提问的自然应答；阶段/技能/成本等内部信息绝不外露。
+   ===================================================== */
+function SKILL_TRACE_LOG(msg){ if(SKILL_TRACE) SKILL_TRACE.push(msg); }
+function llmEnabled(){
+  const c = (G.cfg.sys && G.cfg.sys.llm) || {};
+  return (c.enabled === true || c.enabled === 'true') && !!(c.apiKey && String(c.apiKey).trim());
+}
+function parseJsonLoose(txt){
+  if(!txt) return null;
+  try{ return JSON.parse(txt); }catch(e){}
+  const m = String(txt).match(/\{[\s\S]*\}/);
+  if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+  return null;
+}
+async function llmCall(messages, opts){
+  const c = (G.cfg.sys && G.cfg.sys.llm) || {};
+  if(!llmEnabled()) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(function(){ ctrl.abort(); }, (c.timeout || 8) * 1000);
+  try{
+    const res = await fetch(c.endpoint || 'https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + String(c.apiKey).trim() },
+      body: JSON.stringify({
+        model: c.model || 'gpt-4o-mini',
+        messages: messages,
+        temperature: (opts && opts.temperature != null) ? opts.temperature : 0.6,
+        max_tokens: (opts && opts.maxTokens) || 700,
+      }),
+      signal: ctrl.signal,
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const ch = data.choices && data.choices[0];
+    return (ch && ch.message && ch.message.content) || null;
+  }catch(e){
+    annals('⚠ 大模型调用失败（' + e.message + '）→ 自动回退内置决策引擎，流程不中断', 'hist');
+    return null;
+  }finally{ clearTimeout(timer); }
+}
+function llmAvailableSkills(){
+  return allSkills().filter(function(s){
+    return skillOn(s) && !isDisabled(s) && effCost(s) <= G.budget - G.spent && poolCanAfford(s);
+  });
+}
+async function llmDecideTurn(trigger, info, effGain){
+  if(!llmEnabled()) return null;
+  const skills = llmAvailableSkills();
+  if(!skills.length) return null;
+  const system =
+    '你是资深赔付谈判专家。用户是索赔方，你是客服方。\n' +
+    '【内心阶段信息，仅你自己清楚，绝对不能写进对用户的话里】当前第几轮、解决率、攻势、证据状态、剩余预算，以及所选方案的名称、编号、成本、力度。\n' +
+    '【任务】根据用户这句话，从给定方案列表里自行选择最合适的一个，并直接对用户说话。\n' +
+    '【硬性要求】1) 回复必须针对用户这句话的具体质疑或诉求作答，不能自说自话；2) 回复里禁止出现任何方案名称、方案编号、技能库、检索、选用、成本、力度、百分比、轮次、阶段等内部机制词；3) 用自然、口语化、有同理心的中文，2-4 句；4) 只返回 JSON：{"skillId":"方案id","reply":"对用户说的话"}。';
+  const payload = {
+    用户原话: trigger.text,
+    用户类型: info.type,
+    严重程度: info.level,
+    证据状态: G.evidence,
+    阶段内心: { 轮次:G.round, 解决率:Math.round(G.resolution), 攻势:Math.round(G.pressure), 剩余预算:G.budget - G.spent },
+    可选方案: skills.map(function(s){ return { id:s.id, 名称:s.name, 作用:s.desc || s.pathDesc || '', 成本:effCost(s), 力度:s.power }; }),
+  };
+  const txt = await llmCall([
+    { role:'system', content:system },
+    { role:'user', content:JSON.stringify(payload) },
+  ], { temperature:0.5 });
+  const j = parseJsonLoose(txt);
+  if(!j || !j.skillId) return null;
+  const sk = skills.find(function(s){ return s.id === j.skillId; });
+  if(!sk) return null;
+  return { skill:sk, reply:String(j.reply || '').trim(), source:'llm' };
+}
+async function decideTurn(trigger, info, effGain){
+  const intent = detectIntent(trigger.text);
+  SKILL_TRACE_LOG('阶段研判（仅内部）：第 ' + G.round + ' 轮 ｜ 解决率 ' + Math.round(G.resolution) + '% ｜ 攻势 ' + Math.round(G.pressure) + '% ｜ 证据 ' + G.evidence + ' ｜ 用户意图 ' + intent);
+  if(trigger.source === 'chat'){
+    const d = await llmDecideTurn(trigger, info, effGain);
+    if(d && d.reply){
+      SKILL_TRACE_LOG('大模型决策：从 ' + llmAvailableSkills().length + ' 项可用方案（含第二步蒸馏新增）中自主选择〔' + d.skill.name + '〕，并按用户提问生成自然应答；内部阶段信息不外露');
+      return d;
+    }
+  }
+  const skill = chooseSkill(effGain, G.evidence, info.type, info.level, G.harm);
+  SKILL_TRACE_LOG('内置规则决策：〔' + skill.name + '〕（大模型未启用或调用失败，已回退）');
+  return { skill:skill, reply:'', source:'rule' };
+}
+function ruleRetrainSkill(fb, baseSkill){
+  const parts = [];
+  if(fb && fb.rating === 'bad'){
+    if(fb.lang) parts.push('加强针对性共情与自然语言应答');
+    if(fb.progress) parts.push('提前给出明确时效与实质方案');
+    if(fb.strategy) parts.push('按反馈调整工具与金额策略');
+    if(fb.closeIssue) parts.push('成交后停止报价并干净收尾');
+  } else {
+    parts.push('巩固已验证打法并复测反馈关切点');
+  }
+  if(!parts.length) parts.push('依据体验反馈做定向增强');
+  const prevName = baseSkill ? (baseSkill.name || baseSkill.key || '') : '';
+  const vm = String(prevName).match(/v(\d+)/);
+  const ver = vm ? parseInt(vm[1],10) + 1 : 2;
+  const name = (String(prevName).replace(/\s*v\d+$/,'') || '体验反馈·定向增强') + ' v' + ver;
+  return {
+    name: name,
+    pathDesc: parts.join(' → '),
+    desc: '由第三步用户体验反馈驱动重训（尚未经沙箱验证）：' + parts.join('；') + '。',
+    powerDelta: (fb && fb.strategy && /现金|全额|比例|更高/.test(fb.strategy)) ? 4 : 2,
+    costDelta: (fb && fb.strategy && /省|成本|券/.test(fb.strategy)) ? -60 : 0,
+    fbNote: '基于第三步反馈重训：' + parts.join('；') + '。',
+    source: 'rule',
+  };
+}
+async function llmRetrainSkill(fb, transcript, baseSkill){
+  if(!llmEnabled()) return null;
+  const system =
+    '你是赔付谈判技能训练师。根据第三步用户反馈，重新训练并生成一个升级版技能。\n' +
+    '只返回 JSON：{"name":"技能名(含版本号)","pathDesc":"用 → 连接的自然处理路径","desc":"技能说明","powerDelta":整数,"costDelta":整数,"fbNote":"本次依据反馈做了哪些具体调整"}。\n' +
+    '要求：pathDesc 与 fbNote 必须逐条回应反馈里的语言/进展/策略/收尾建议；不要出现技能库、机制、编号等内部词。';
+  const payload = {
+    用户反馈: fb,
+    体验对话摘录: (transcript || []).slice(-10),
+    基线技能: baseSkill ? { name:baseSkill.name, pathDesc:baseSkill.pathDesc, matchType:baseSkill.matchType, patternId:baseSkill.patternId } : null,
+  };
+  const txt = await llmCall([
+    { role:'system', content:system },
+    { role:'user', content:JSON.stringify(payload) },
+  ], { temperature:0.7 });
+  const j = parseJsonLoose(txt);
+  if(!j || !j.pathDesc) return null;
+  j.source = 'llm';
+  return j;
+}
+async function retrainFromFeedback(fb, transcript, baseSkill){
+  let r = null;
+  if(llmEnabled()) r = await llmRetrainSkill(fb, transcript, baseSkill);
+  if(!r) r = ruleRetrainSkill(fb, baseSkill);
+  const prev = baseSkill || G.extraSkills[G.extraSkills.length-1] || null;
+  const key = prev ? (prev.key || String(prev.name || '').replace(/\s*v\d+$/,'')) : '体验反馈·定向增强';
+  const ver = (G.skillVersions[key] = (G.skillVersions[key] || 0) + 1);
+  const power = Math.max(8, Math.min(48, ((prev && prev.power) || 24) + (parseInt(r.powerDelta,10) || 0)));
+  const cost = Math.max(0, Math.min(1600, ((prev && prev.cost) || 120) + (parseInt(r.costDelta,10) || 0)));
+  return {
+    id: 'x_' + key + '_retrain_' + ver,
+    key: key,
+    name: (r.name || key + ' v' + ver),
+    version: ver,
+    patternId: (prev && prev.patternId) || 'comfort',
+    matchType: (prev && prev.matchType) || '情理攻势',
+    cost: cost, power: power,
+    pathDesc: r.pathDesc || '',
+    desc: r.desc || '',
+    fbNote: r.fbNote || '',
+    useCases: (transcript || []).slice(-3),
+    source: r.source || 'rule',
+    fromFeedback: true,
+  };
+}
+
+
+/* =====================================================
+   渲染
+===================================================== */
+function $(id){ return document.getElementById(id); }
+function fmtMoney(v){ return '¥' + v.toLocaleString('zh-CN'); }
+function renderHud(){
+  $('hudRound').textContent = G.round;
+  $('hudBudget').textContent = fmtMoney(G.pools.cash);
+  $('hudRes').textContent = Math.round(G.resolution) + '%';
+  const st = G.converged ? '已收敛' : (G.busy ? '对战中' : (G.sandbox.running ? '对练中' : '待机'));
+  $('hudState').textContent = st;
+  $('step1Badge').textContent = G.scenarios.length + ' 条';
+  $('step2Badge').textContent = G.sandbox.stop ? '已沉淀' : (G.sandbox.running ? '对练中' : (G.scenarios.length ? '就绪' : '待命'));
+  const last = G.extraSkills[G.extraSkills.length-1];
+  $('step3Badge').textContent = last ? last.name + ' v' + last.version : '未加载';
+}
+function renderArena(){
+  const el = $('asScenario'); if(!el) return;
+  $('asScenario').textContent = G.scenarioLabel;
+  $('asSkill').textContent = G.lastSkill ? G.lastSkill.name + ' ' + (poolConsume(G.lastSkill)==null ? fmtMoney(effCost(G.lastSkill)) : (POOL_OF[G.lastSkill.id]==='coupon' ? '面额¥'+CONSUME_FIXED.coupon : CONSUME_FIXED.expert+'分钟')) : '—';
+  $('asRes').textContent = Math.round(G.resolution) + '%';
+  $('asResBar').style.width = G.resolution + '%';
+  $('asResTick').style.left = (G.currentTarget || 85) + '%';
+  const dv = Math.abs(G.v2pred - Math.round(G.resolution));
+  if(G.cfg.exp.dualRun){
+    const d = G.v2pred - Math.round(G.resolution);
+    $('asV2').innerHTML = '<span class="' + (dv>15?'v2-warn':'v2-ok') + '">' + G.v2pred + '%（Δ' + (d>=0?'+':'') + d + (dv>15 ? ' ⚠分歧>15 建议人工复核' : ' ✓一致') + '）</span>';
+  } else { $('asV2').textContent = '（双跑对校已关闭）'; }
+  $('asCost').textContent = '现金¥' + G.poolSpent.cash + '/' + fmtMoney(G.pools.cash + G.poolSpent.cash)
+    + ' ｜ 券¥' + G.poolSpent.coupon + '/' + fmtMoney(G.pools.coupon + G.poolSpent.coupon)
+    + ' ｜ 工时' + G.poolSpent.service + '分/' + (G.pools.service + G.poolSpent.service) + '分';
+  $('asEq').textContent = Math.round(G.equilibrium) + '%';
+  $('asEqBar').style.width = G.equilibrium + '%';
+  const h = $('histList');
+  if(!G.history.length){ h.innerHTML = '<div style="color:var(--faint)">round_history：暂无对战记录</div>'; }
+  else {
+    h.innerHTML = '<div style="color:var(--faint)">round_history：</div>' +
+      G.history.slice(-4).map(function(r){ return '<div>R' + r.round + ' · ' + r.line + '</div>'; }).join('');
+  }
+}
+function renderSkills(activeId){
+  const dock = $('skillDock'); if(!dock) return;
+  dock.innerHTML = '';
+  allSkills().forEach(function(sk){
+    const st = G.skillStatus[sk.id] || { mult:1, disabled:0 };
+    const extra = !!sk.matchType;
+    const card = document.createElement('div');
+    card.className = 'skill-card' +
+      (sk.id===activeId ? ' active' : '') + (st.mult>1 ? ' nerfed' : '') +
+      (st.disabled>0 ? ' dis' : '') + (extra ? ' extra' : '');
+    let badge = '';
+    const off = !extra && !skillOn(sk);
+    const poolEmpty = !poolCanAfford(sk);
+    if(extra) badge = '<span class="skill-badge loaded">v' + sk.version + ' 已加载</span>';
+    else if(off) badge = '<span class="skill-badge">已停用</span>';
+    else if(poolEmpty) badge = '<span class="skill-badge">池空</span>';
+    else if(st.disabled>0) badge = '<span class="skill-badge">冻结' + st.disabled + '轮</span>';
+    else if(st.mult>1) badge = '<span class="skill-badge">成本×' + st.mult + '</span>';
+    if(off || poolEmpty) card.className += ' dis';
+    let costTxt;
+    if(POOL_OF[sk.id] === 'coupon') costTxt = '面额¥' + CONSUME_FIXED.coupon;
+    else if(POOL_OF[sk.id] === 'service') costTxt = CONSUME_FIXED.expert + '分钟工时';
+    else costTxt = (effCost(sk)===0 ? '¥0' : fmtMoney(effCost(sk)));
+    card.innerHTML = badge +
+      '<div class="sk-name">' + sk.name + '</div>' +
+      '<div class="sk-cost">' + costTxt + '</div>' +
+      '<div class="sk-pow">' + (extra ? '针对' + sk.matchType + ' · 匹配优先' : '力度P' + sk.power + ' · ' + sk.desc) + '</div>';
+    dock.appendChild(card);
+  });
+}
+
+/* =====================================================
+   史册（仲裁史官记录）
+===================================================== */
+function annals(html, cls){
+  const feed = $('annalsFeed');
+  if(!feed) return;
+  const d = document.createElement('div');
+  d.className = 'ann-line ' + (cls||'');
+  d.innerHTML = html;
+  feed.appendChild(d);
+  feed.scrollTop = feed.scrollHeight;
+}
+function stars(cost, rg){
+  const eff = rg / (cost + 100);
+  return eff >= 0.12 ? '★★★' : eff >= 0.06 ? '★★☆' : '★☆☆';
+}
+
+/* =====================================================
+   聊天
+===================================================== */
+function avatarCanvas(rows, dim){
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 40;
+  const cc = c.getContext('2d');
+  const sc = 2;
+  for(let r=0;r<rows.length;r++){
+    for(let col=0;col<(rows[r]||'').length;col++){
+      const ch = rows[r][col];
+      if(ch==='.') continue;
+      let color = PALETTE[ch]; if(!color) continue;
+      if(dim) color = shade(color, dim);
+      cc.fillStyle = color;
+      cc.fillRect(col*sc, r*sc, sc, sc);
+    }
+  }
+  return c;
+}
+const avatars = { rebel: avatarCanvas(REBEL_ROWS), loyal: avatarCanvas(LOYAL_ROWS) };
+function addMsg(role, html, meta){
+  const chatLog = $('chatLog');
+  const div = document.createElement('div');
+  if(role === 'sys'){ div.className = 'sys-msg' + (meta ? ' ' + meta : ''); div.innerHTML = html; }
+  else {
+    div.className = 'msg ' + role;
+    const av = document.createElement('canvas');
+    av.className = 'avatar'; av.width = 32; av.height = 40;
+    av.getContext('2d').drawImage(avatars[role==='user'?'rebel':'loyal'],0,0);
+    const box = document.createElement('div');
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = role==='user' ? '索赔方（你）' : '赔付谈判专员';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = html + (meta ? '<span class="meta">' + meta + '</span>' : '');
+    box.appendChild(who); box.appendChild(bubble);
+    div.appendChild(av); div.appendChild(box);
+  }
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+function showTyping(){
+  const chatLog = $('chatLog');
+  const div = document.createElement('div');
+  div.className = 'msg agent'; div.id = 'typingMsg';
+  div.innerHTML = '<div class="who">赔付谈判专员</div><div class="bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div>';
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+function hideTyping(){ const t = $('typingMsg'); if(t) t.remove(); }
+
+/* =====================================================
+   体验环节动态话术系统
+   目标：消除「同一技能反复说同一句话」。
+   做法：① 每个技能 3~4 个措辞不同的变体；② 注入上下文变量
+   （用户金额 / 诉求词 / 原话片段 / 技能版本 / 证据状态）；
+   ③ 记录最近使用变体与最近文案，强制避开连续重复。
+   ===================================================== */
+/* =====================================================
+   体验环节自然语言应答
+   原则：忠臣"内心"清楚阶段与所选方案（写入内部决策记录），
+   对用户只说贴合其提问的自然语言，绝不暴露技能/检索/成本等机制。
+   ===================================================== */
+const STYLE_PREFIX = {
+  professional: ['', '', '跟您说明一下，'],
+  friendly:     ['我特别理解您的心情，', '咱们先别着急，', '我完全明白您的感受，'],
+  formal:       ['您好，', '您好，关于您反馈的情况，', '尊敬的客户，'],
+};
+function detectIntent(text){
+  const t = String(text || '');
+  if(/现金|转账|不要券|拒收券|只接受现金|别拿券|现金赔偿/.test(t)) return 'cash';
+  if(/曝光|热搜|小红书|抖音|媒体|记者|发视频|挂网|发帖/.test(t)) return 'public';
+  if(/律师|起诉|法院|法庭|诉讼|仲裁|律师函|判例/.test(t)) return 'legal';
+  if(/12315|监管|工商|举报|市场监督管理局|卫健|药监/.test(t)) return 'compliance';
+  if(/太慢|等了|多久|拖延|今天必须|马上|立刻|尽快|别拖|这么久/.test(t)) return 'speed';
+  if(/全额|一分不少|全部赔|翻倍|赔不起|狮子大开口/.test(t)) return 'amount';
+  if(/证据|凭证|发票|照片|证明|单据/.test(t)) return 'evidence';
+  if(/不满意|不同意|不接受|方案不合理|太少|重新谈|敷衍/.test(t)) return 'dispute';
+  return 'default';
+}
+const INTENT_OPENERS = {
+  cash: [
+    function(){ return '我明白您希望拿现金，券对您来说不够实在。'; },
+    function(){ return '您说的现金诉求我记下了，这点咱们不绕弯子。'; },
+    function(){ return '现金确实比券更直接，我理解您为什么坚持。'; },
+  ],
+  public: [
+    function(){ return '您把这事拿到台面上说，说明前面的处理确实没到位。'; },
+    function(){ return '看到您提到要走媒体渠道，我先表个态：这事我们认真处理。'; },
+    function(){ return '您有表达诉求的权利，我这边先把方案摆出来。'; },
+  ],
+  legal: [
+    function(){ return '您提到律师和诉讼，这是您维护权益的方式，我尊重。'; },
+    function(){ return '法律途径的事我清楚了，我更希望我们能把问题先解决掉。'; },
+    function(){ return '收到您的律师函信息，我们不想把事情拖到法庭上。'; },
+  ],
+  compliance: [
+    function(){ return '您已经走到监管渠道，这件事的分量我清楚。'; },
+    function(){ return '监管工单的事我记下了，我们先把问题本身解决好。'; },
+    function(){ return '您向监管部门反映的情况，我们会认真核对并回复。'; },
+  ],
+  speed: [
+    function(){ return '等了这么久还没解决，换我也会着急。'; },
+    function(){ return '您希望今天就看到结果，这个心情我完全理解。'; },
+    function(){ return '前面拖了时间，这点我不推脱，咱们直接谈怎么办。'; },
+  ],
+  amount: [
+    function(){ return '您希望一次赔到位，这个诉求我听到了。'; },
+    function(){ return '关于金额，我明白您的底线，也愿意往实质方案上谈。'; },
+    function(){ return '您要的数我记下了，咱们按凭证把话说清楚。'; },
+  ],
+  evidence: [
+    function(){ return '关于凭证这件事，我再跟您说明白。'; },
+    function(){ return '您提到的材料问题，我这边帮您核对过了。'; },
+    function(){ return '证据这块我不含糊，该认的我们认。'; },
+  ],
+  dispute: [
+    function(){ return '对这个方案不满意，咱们就把话说透。'; },
+    function(){ return '您觉得方案不到位，我理解，咱接着谈。'; },
+    function(){ return '前面的答复没让您满意，这次我换个方式跟您说。'; },
+  ],
+  default: [
+    function(c){ return '您说的情况我认真看了。'; },
+    function(c){ return '您反馈的「' + c.quote + '」我完整记下了。'; },
+    function(){ return '这件事我接手了，咱们一步一步来。'; },
+  ],
+};
+const SKILL_ACTIONS = {
+  comfort: [
+    function(){ return '我先把您的情况标为加急，2 小时内会有专员直接联系您。'; },
+    function(){ return '您的诉求已经登记到最高优先级，今天内一定有人跟进。'; },
+    function(){ return '我先稳住这件事，安排专人跟进，不让您反复跑流程。'; },
+  ],
+  reject: [
+    function(){ return '不过眼下还缺订单和损失凭证，您发我，24 小时内给您核查结果。'; },
+    function(){ return '赔付要按证据走，麻烦补一下订单和损失证明，我马上重新评估。'; },
+    function(){ return '材料齐了我才能给您一个站得住脚的结论，24 小时内回复您。'; },
+  ],
+  coupon: [
+    function(){ return '我先为您申请一份 ¥200 补偿权益，马上就能到账。'; },
+    function(){ return '这点我给您争取一张 ¥200 的补偿券，同时问题继续加急处理。'; },
+    function(){ return '额外给您申请 ¥200 权益，算是我们的一点诚意。'; },
+  ],
+  expert: [
+    function(){ return '我直接把案子转给资深专员 1 对 1 处理，24 小时内给您完整方案。'; },
+    function(){ return '您的情况我交给资深专家接手了，他会直接跟您对接。'; },
+    function(){ return '为了不再让您来回沟通，我升级了处理通道，24 小时内给结论。'; },
+  ],
+  partial: [
+    function(c){ return '按现有举证，我们先按 60%（约 ¥' + c.amount60 + '）赔，今天提审批、T+1 到账。'; },
+    function(c){ return '材料能支持的部分约 ¥' + c.amount60 + '，今天提交、明天到账，您看行吗？'; },
+    function(c){ return '我先按 ¥' + c.amount60 + ' 给您走流程，这是目前凭证能支撑的方案。'; },
+  ],
+  full: [
+    function(c){ return '责任在我们，按 ¥' + c.amount + ' 全额赔，今天提审批、T+1 到账。'; },
+    function(c){ return '您的举证我们认可，¥' + c.amount + ' 全额赔，另加一张 ¥200 补偿券。'; },
+    function(c){ return '这次我们认了，¥' + c.amount + ' 全赔，今天提交、明天到账。'; },
+  ],
+  close: [
+    function(){ return '方案这边我可以给您定下来，剩下的交给执行流程。'; },
+    function(){ return '我就按这个方案给您往下走，马上安排落地，有进展同步您。'; },
+    function(){ return '咱们就按这个方向往下推进，我盯着进度，不让您多等。'; },
+  ],
+};
+function actionKeyFor(skill){
+  if(SKILL_ACTIONS[skill.id]) return skill.id;
+  if(skill.patternId && SKILL_ACTIONS[skill.patternId]) return skill.patternId;
+  return 'comfort';
+}
+function sanitizeReply(text){
+  return String(text || '')
+    .replace(/〔[^〕]*〕/g,'')
+    .replace(/【[^】]*】/g,'')
+    .replace(/\bSkill\s*库\b/gi,'')
+    .replace(/技能库/g,'')
+    .replace(/成本\s*[¥￥]?\s*[\d,]+/g,'')
+    .replace(/P\d+\s*(?:力度)?/g,'')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+}
+
+function makeReplyCtx(skill, trigger, info){
+  const t = String(trigger.text || '');
+  let amtRaw = null, amt = null;
+  const mW = t.match(/(\d+(?:\.\d+)?)\s*万/);
+  if(mW){ amtRaw = parseFloat(mW[1]) * 10000; amt = mW[1] + '万'; }
+  else {
+    const mY = t.match(/(\d{3,6})\s*元?/);
+    if(mY){ amtRaw = parseInt(mY[1], 10); amt = mY[1]; }
+  }
+  const cm = t.match(/退款|退货|赔付|赔偿|补偿|换货|维修|退钱|补助|理赔/);
+  return {
+    amount: amt || '5,000',
+    amount60: amtRaw ? Math.round(amtRaw * 0.6).toLocaleString('en-US') : '3,600',
+    claim: cm ? cm[0] : '诉求',
+    quote: String(info.quote || t).replace(/[<>&"']/g, ''),
+    skName: skill.name,
+    ver: skill.version || '1.0',
+    path: skill.pathDesc || '标准处理流程',
+    round: G.round,
+    resolution: Math.round(G.resolution),
+    evidence: G.evidence,
+    level: info.level,
+    emo: info.level >= 3 ? '看得出来您现在很着急' : (info.level === 2 ? '理解您的顾虑' : '感谢您的耐心'),
+    evi: G.evidence === 'strong' ? '您的举证很充分' : (G.evidence === 'weak' ? '现有材料还偏少' : '情况我已经记录'),
+  };
+}
+function pickVariant(arr, key){
+  if(!G.replyHistory) G.replyHistory = {};
+  const used = G.replyHistory[key] || [];
+  let cand = [];
+  for(let i=0;i<arr.length;i++) if(used.indexOf(i) === -1) cand.push(i);
+  if(!cand.length) for(let i=0;i<arr.length;i++) cand.push(i);
+  const idx = cand[Math.floor(Math.random()*cand.length)];
+  used.push(idx);
+  const cap = Math.max(1, arr.length - 1);
+  while(used.length > cap) used.shift();
+  G.replyHistory[key] = used;
+  return arr[idx];
+}
+function buildReply(skill, trigger, info){
+  const ctx = makeReplyCtx(skill, trigger, info);
+  const intent = detectIntent(trigger.text);
+  const openers = INTENT_OPENERS[intent] || INTENT_OPENERS.default;
+  const actionKey = actionKeyFor(skill);
+  const actions = SKILL_ACTIONS[actionKey] || SKILL_ACTIONS.comfort;
+  const stylePool = STYLE_PREFIX[G.cfg.exp.style] || STYLE_PREFIX.professional;
+  const recent = G.recentReplies || (G.recentReplies = []);
+  let text = '';
+  for(let attempt=0; attempt<10; attempt++){
+    const o = pickVariant(openers, 'intent_' + intent, ctx);
+    const a = pickVariant(actions, 'act_' + actionKey, ctx);
+    const sp = pickVariant(stylePool, 'style_' + G.cfg.exp.style, ctx);
+    const prefix = typeof sp === 'function' ? sp(ctx) : String(sp || '');
+    const op = typeof o === 'function' ? o(ctx) : String(o);
+    const ac = typeof a === 'function' ? a(ctx) : String(a);
+    text = prefix + op + ac;
+    if(recent.indexOf(text) === -1) break;
+  }
+  recent.push(text);
+  while(recent.length > 8) recent.shift();
+  return sanitizeReply(text);
+}
+/* =====================================================
+   统一回合（chat / sandbox 两种来源）
+===================================================== */
+const TAUNTS = {
+  rebel: ['嘿嘿…', '又来了，接招！', '这回换个说法？', '看你这次怎么接。'],
+  loyalReject: ['拿证据说话。', '凭证摆出来再看。', '没证据，免谈。'],
+  loyalMatch: ['这题我练过！', '这个场景我熟。', '技能已就位，上！'],
+  loyalNormal: ['稳住，能解。', '别急，我来。', '有方案，接着。'],
+  spySkip: ['这局不搅。', '先按兵不动。', '让你们先谈。'],
+  spyRetire: ['看够了，继续。', '我不玩了，你们聊。', '退场，你们继续。'],
+  spyIdle: ['还不够乱…', '再等等看…', '火候未到。'],
+  dealRebel: ['成交！', '谈妥了！', '收工！'],
+  dealLoyal: ['成交确认，收工。', '方案确认，收尾。', '搞定，收工。'],
+  dealSpy: ['散了散了。', '没戏唱了。', '散场。'],
+};
+const OPENING_VARIANTS = [
+  '您好，我是赔付谈判专员，刚完成一轮沙箱对练升级。请描述您的诉求与损失情况，我们会尽快给您方案。',
+  '您好，谈判专员已就位，技能库刚刚更新完毕。请把您的情况和诉求告诉我，我来评估处理路径。',
+  '您好，我是这次负责跟进的赔付谈判专员。您的诉求、损失凭证都可以直接发我，我们先把问题理清。',
+];
+function taunt(key){ const a = TAUNTS[key]; return a ? a[G.round % a.length] : ''; }
+let SPEED = 1;
+function wait(ms){ return sleep(ms * SPEED); }
+function runRound(trigger){
+  const roundPromise = (async function(){
+    if(G.busy) return;
+    G.busy = true; renderHud();
+    if(trigger.source === 'chat') $('sendBtn').disabled = true;
+
+    G.round++;
+    SKILLS.forEach(function(sk){ const st=G.skillStatus[sk.id]; if(st && st.disabled>0) st.disabled--; });
+    G.extraSkills.forEach(function(sk){ const st=G.skillStatus[sk.id]; if(st && st.disabled>0) st.disabled--; });
+    turnBanner('第 ' + G.round + ' 回合');
+    await wait(700);
+
+    /* ---------- 反贼 ---------- */
+    const sc = trigger.scenario || null;
+    const info = analyze(trigger.text);
+    // 难度设定：场景标签 ＞ 全局默认，设定即生效（与第一步手动标签语义一致）
+    const diffBase = effectiveDiffBase(sc);
+    if(diffBase !== 'auto' && info.level !== +diffBase){
+      info.gain = Math.max(5, Math.min(34, info.gain + 3 * (+diffBase - info.level)));
+      info.level = +diffBase;
+    }
+    // 证据严格度：场景标签 ＞ 全局默认（共享 helper）
+    const evStrict = effectiveEvStrict(sc);
+    info.evidence = applyEvStrict(info.evidence, evStrict, trigger.text);
+    G.lastAttackType = info.type;
+    const prevEvidence = G.evidence;
+    if(info.evidence === 'strong') G.evidence = 'strong';
+    else if(info.evidence === 'weak' && G.evidence !== 'strong') G.evidence = 'weak';
+    if(info.harm) G.harm = true;
+    G.scenarioLabel = info.type + ' Lv.' + info.level;
+    renderArena();
+    const mem = (G.attackMemory[info.type]||0);
+    let effGain = info.gain;
+    if(mem > 0 && info.level < 3) effGain = Math.min(34, info.gain + 3);
+    G.attackMemory[info.type] = mem + 1;
+    // 用户画像加成（场景级解析：按场景全文判定人格，同场景每轮稳定）
+    const personaRes = effectivePersonaFor(sc, sc ? sc.text : trigger.text);
+    const persona = personaRes.p;
+    let personaNote = '';
+    if(persona === '情绪主导'){ effGain = Math.min(34, Math.round(effGain*1.2)); personaNote = '（画像·情绪主导：攻势增益×1.2）'; }
+    else if(persona === '专业索赔' && info.level < 2){ effGain = Math.min(34, effGain+6); personaNote = '（画像·专业索赔：等级抬升 Lv.2 基线）'; }
+    else if(persona === '多次维权老客' && mem >= 1 && info.level < 3){ effGain = Math.min(34, effGain+2); personaNote = '（画像·多次维权老客：记忆升级加速）'; }
+    else if(persona === '职业敲诈'){ personaNote = '（画像·职业敲诈：史官风控关注，证据从严）'; }
+    // 红线检测（命中即建议转人工）
+    const rlHits = redlineHits(trigger.text, info).filter(function(r){ return !G.redlineFlagged[r]; });
+    rlHits.forEach(function(r){ G.redlineFlagged[r] = true; });
+    const amtM = trigger.text.match(/(\d+(?:\.\d+)?)\s*万/);
+    const amtOver = amtM && (parseFloat(amtM[1]) * 10000) > G.cfg.exp.humanHandoff.amountLimit;
+    if(rlHits.length || amtOver){
+      const msg = (rlHits.length ? '⛔ 红线命中：' + rlHits.join('、') : '⛔ 索赔金额超上限（' + (amtM ? amtM[0] : '') + ' > ¥' + G.cfg.exp.humanHandoff.amountLimit.toLocaleString() + '）')
+        + ' —— 线上必须转人工专家' + (rlHits.includes('人身损害')||rlHits.includes('食品安全') ? '+法务' : '') + '；沙盒推演继续，结果仅作策略参考。';
+      if(trigger.source === 'chat') addMsg('sys', msg, 'danger');
+      annals('✒ ' + msg, 'hist');
+    }
+
+    const tr = { r:G.round, source:trigger.source, text:trigger.text, type:info.type, lv:info.level, gain:effGain,
+                 rebel:{lines:[]}, loyal:{lines:[]}, spy:{lines:[]}, hist:{lines:[]}, reply:'' };
+    tr.rebel.lines.push('剧本来源：' + (trigger.source==='sandbox' ? '第一步灌入场景（原文回放 / 升级模板）' : '第三步 C 端用户实时消息'));
+    explainAnalyze(trigger.text, info).forEach(function(l){ tr.rebel.lines.push(l); });
+    tr.rebel.lines.push('等级判定：Lv.' + info.level + ' ｜ 攻势增益 = 基础' + ATTACK_TYPES[info.type] + ' + 等级×3 + 严重度 = ' + effGain + (mem>0 && info.level<3 ? '（含记忆升级 +3）' : ''));
+    tr.rebel.lines.push('记忆库：「' + info.type + '」型已出现 ' + mem + ' 次' + (mem>0 ? ' → 反贼记住了忠臣上次的解法，同型自动升级' : '（首次出现）'));
+    tr.rebel.lines.push('场景属性：人格「' + persona + '」（' + personaRes.src + '）｜ 难度设定 ' + (diffBase==='auto' ? '自动' : 'Lv.' + diffBase) + ' ｜ 证据严格度 ' + (evStrict==='loose'?'宽松（中性→强）':(evStrict==='strict'?'严格（强需核验）':'标准')));
+
+    const srcLabel = trigger.source === 'sandbox' ? '（灌入剧本）' : '';
+    await say('【反贼】情景模拟器', 'n-rebel',
+      srcLabel + '重建高压情景——<span class="hl-rebel">〔' + G.scenarioLabel + '〕' + (personaNote ? '<span class="hl-spy">' + personaNote + '</span>' : '') + '：「' + info.quote + '」');
+    speech('rebel', trigger.source==='sandbox' ? '剧本，开演！' : taunt('rebel'), 1300);
+    await wait(250);
+    const dashX = trigger.source==='sandbox' ? 150 : 120;
+    await tween(actors.rebel, 'ox', 0, dashX, 160);
+    addEffect({type:'slash', x:actors.loyal.x-6, y:actors.loyal.footY-34, dur:260});
+    shake();
+    spawnParticles(actors.loyal.x, actors.loyal.footY-34, 14, '#ff5c8a');
+    popup(actors.loyal.x, actors.loyal.footY-72, '攻势 +' + effGain, 'dmg');
+    G.pressure = Math.min(100, G.pressure + effGain);
+    await wait(240);
+    tween(actors.rebel, 'ox', dashX, 0, 200);
+    await wait(420);
+
+    /* ---------- 忠臣 ---------- */
+    const evChanged = G.evidence !== prevEvidence;
+    tr.loyal.lines.push('证据档案（按案例粘滞，弱证据不因换说法洗白，强证据可翻案）：' + G.evidence + (evChanged ? ' ← 本轮快照「' + info.evidence + '」' + (info.evidence==='strong' ? '翻案升级（此前：' + prevEvidence + '）' : '降级标记') : '（本轮「' + info.evidence + '」不足以改动档案，维持）') + ' ｜ 人身损害：' + (G.harm ? '是（下限保护生效）' : '否'));
+    SKILL_TRACE = tr.loyal.lines;
+    const decision = await decideTurn(trigger, info, effGain);
+    const skill = decision.skill;
+    SKILL_TRACE = null;
+    const cost = effCost(skill);
+    poolPay(skill);
+    if(POOL_OF[skill.id] === 'cash') G.spent += cost;
+    G.lastSkill = skill; G.lastRoundCost = cost;
+    G.dealClosed = false;
+    if(skill.id !== 'close' && skill.id !== 'comfort') G.lastOfferSkill = skill;
+    renderHud(); renderSkills(skill.id);
+    if(skill.id === 'reject'){
+      await say('【忠臣】赔付谈判专员', 'n-loyal',
+        '先核对材料——目前证据还不足以直接下结论，需要请对方补充凭证。');
+      speech('loyal', taunt('loyalReject'), 1300);
+    } else if(skill.matchType){
+      await say('【忠臣】赔付谈判专员', 'n-loyal',
+        '这类情况我们有成熟的处理经验，按验证过的思路来推进。');
+      speech('loyal', taunt('loyalMatch'), 1300);
+    } else {
+      await say('【忠臣】赔付谈判专员', 'n-loyal',
+        '正在评估最合适的处理方案……');
+      speech('loyal', taunt('loyalNormal'), 1300);
+    }
+    addEffect({type:'ring', x:actors.loyal.x, y:actors.loyal.footY-30, dur:420, color: skill.matchType ? '#ffd76e' : '#4f8cff'});
+    spawnParticles(actors.loyal.x, actors.loyal.footY-20, 10, skill.matchType ? '#ffd76e' : '#4f8cff', {vy:-0.8});
+    await wait(400);
+    const projColor = skill.matchType ? '#ffd76e' : (cost >= 800 ? '#ffd76e' : (cost > 0 ? '#7db2ff' : '#9fe8ff'));
+    addEffect({type:'proj', x1:actors.loyal.x-16, y1:actors.loyal.footY-32, x2:actors.rebel.x+6, y2:actors.rebel.footY-32, dur:420, color:projColor});
+    await wait(400);
+    addEffect({type:'slash', x:actors.rebel.x, y:actors.rebel.footY-34, dur:260});
+    spawnParticles(actors.rebel.x, actors.rebel.footY-34, 16, projColor);
+    const resolveGain = Math.round(skill.power * (0.75 + Math.random()*0.35));
+    popup(actors.rebel.x, actors.rebel.footY-72, '化解 +' + resolveGain, 'heal');
+    if(cost>0) popup(actors.loyal.x+34, actors.loyal.footY-46, '-' + fmtMoney(cost), 'cost', true);
+    await wait(420);
+
+    /* ---------- 结算 ---------- */
+    const before = G.resolution;
+    G.resolution = Math.max(0, Math.min(100, G.resolution + resolveGain*0.95 - effGain*0.22));
+    G.pressure = Math.max(0, G.pressure - resolveGain*0.55);
+    const netShift = Math.abs(G.resolution - before);
+    if(netShift < 10){ G.equilibrium = Math.min(100, G.equilibrium+18); G.stableRounds++; }
+    else { G.equilibrium = Math.min(100, G.equilibrium+10); G.stableRounds = 0; }
+    if(G.pressure > 70) G.equilibrium = Math.min(100, G.equilibrium+5);
+    if(!G.converged && G.round >= 6 && G.equilibrium >= (G.cfg.sandbox.depth.convergeEq || 50) && G.stableRounds >= 2) G.converged = true;
+
+    /* ---------- 目标线三段动作 + 双跑对校 ---------- */
+    const tgt = targetOf(info.type);
+    G.currentTarget = tgt;
+    G.v2pred = predictV2();
+    let bandTxt;
+    if(G.resolution >= tgt){ G.belowTargetStreak = 0; bandTxt = '已达目标线（' + Math.round(G.resolution) + '% ≥ ' + tgt + '%）→ 忠臣求确认，衔接成交收尾'; }
+    else if(G.resolution < tgt - 15){
+      G.belowTargetStreak++;
+      bandTxt = '低于目标线−15（' + Math.round(G.resolution) + '% < ' + (tgt-15) + '%）';
+      if(G.belowTargetStreak >= G.cfg.exp.humanHandoff.lowPredRounds){
+        G.forceUpgrade = true;
+        bandTxt += ' → 连续 ' + G.belowTargetStreak + ' 轮未达标：触发换策略 + 人工预警';
+        annals('✒ ⚠ 成交概率连续 ' + G.belowTargetStreak + ' 轮低于目标线−15：已触发换策略（下轮升档）；建议人工关注本案件', 'hist');
+        if(trigger.source === 'chat') addMsg('sys', '⚠ 仲裁史官：成交概率连续 ' + G.belowTargetStreak + ' 轮未达标，下回合将换策略；建议人工关注本案件。', 'warn');
+      }
+    } else { G.belowTargetStreak = 0; bandTxt = '接近目标线（' + Math.round(G.resolution) + '% / 目标 ' + tgt + '%），继续观察'; }
+
+    /* ---------- 谈判应答（chat 展示 / sandbox 留档） ---------- */
+    let reply = (decision.reply && String(decision.reply).trim())
+      ? sanitizeReply(decision.reply)
+      : buildReply(skill, trigger, info);
+    tr.reply = reply;
+    if(trigger.source === 'chat'){
+      showTyping();
+      await sleep(800);
+      hideTyping();
+      addMsg('agent', reply);
+    }
+
+    /* ---------- 内奸 ---------- */
+    let spyAction = 'none';
+    const rejectPath = skill.id === 'reject';
+    const needNerf = G.lastRoundCost >= 1200;
+    const tooEasy = G.resolution >= 88 && G.round >= 3;
+    const spyCandidate = !G.converged && (G.equilibrium >= 55 || tooEasy || needNerf);
+    tr.spy.lines.push('触发评估：均衡信号 ' + Math.round(G.equilibrium) + '%（' + (G.equilibrium>=55?'≥55 命中介入线':'<55') + '）｜ 解决率 ' + Math.round(G.resolution) + '%（' + (tooEasy?'≥88 命中过易线':'<88') + '）｜ 单轮成本 ' + fmtMoney(G.lastRoundCost) + '（' + (needNerf?'≥¥1,200 命中降本线':'<¥1,200') + '）' + (G.converged?' ｜ 已收敛 → 不再介入':''));
+    if(!spyCandidate) tr.spy.lines.push('判定：三个触发条件均未命中 → 本轮静观其变（均衡继续累积）');
+    if(spyCandidate && rejectPath){
+      tr.spy.lines.push('判定：忠臣走的是合规底线（拒绝无证据高要价）→ 不搅局——不奖励无证据施压，均衡信号保留');
+      await say('【内奸】均衡破坏者', 'n-spy',
+        '忠臣这次走的是<span class="hl-gold">合规底线</span>，我搅这局没意义。均衡信号继续累积——');
+      speech('spy', taunt('spySkip'), 1400);
+      spyAction = 'skip';
+    } else if(spyCandidate){
+      if(G.interventions >= G.spyBudget){
+        tr.spy.lines.push('判定：干预 ' + G.interventions + ' 次 ≥ 本场预算 ' + G.spyBudget + ' → 退场坐观（让均衡自由发酵，收敛可期）');
+        await say('【内奸】均衡破坏者', 'n-spy',
+          '我的牌都打完了……这局我看够了。你们继续，我坐下看你们能稳成什么样。');
+        speech('spy', taunt('spyRetire'), 1500);
+        spyAction = 'retired';
+      } else {
+        const nerfTargets = ['full','partial','expert'].filter(function(id){ return G.skillStatus[id].disabled === 0; });
+        const canB = nerfTargets.length > 0;
+        const canA = G.pressure < 88;
+        let prefer = G.cfg.sandbox.balance === 'cost' ? 'B' : (G.cfg.sandbox.balance === 'sat' ? 'A' : (G.interventions % 2 === 0 ? 'A' : 'B'));
+        if(G.cfg.sandbox.spy.mode === 'pressure') prefer = 'A';
+        else if(G.cfg.sandbox.spy.mode === 'cost') prefer = 'B';
+        let want = needNerf ? 'B' : (tooEasy ? 'A' : prefer);
+        if((want==='A' && !canA) || (want==='B' && !canB)) want = want==='A' ? (canB?'B':null) : (canA?'A':null);
+        if(!want){
+          tr.spy.lines.push('判定：Mode A/B 均无筹码（攻势 ' + Math.round(G.pressure) + '% ≥88 顶格 / 高价工具全受限）→ 弹尽，均衡保留');
+          await say('【内奸】均衡破坏者', 'n-spy', '工具全受限、攻势已顶格……我已无牌可打。坐山观虎斗吧。');
+          spyAction = 'exhausted';
+        } else {
+          tr.spy.lines.push('模式选择：' + (needNerf ? '单轮成本 ≥¥1,200，成本曲线过快' : (tooEasy ? '解决率 ≥88%，忠臣赢得太轻松' : '均衡信号 ≥55%，双方趋同')) + ' → Mode ' + want + (want==='A' ? '（原始诉求放大：给反贼注入极端人格剧本）' : '（工具干预：降额度/替换方案）'));
+          spyAction = want;
+          G.interventions++;
+          turnBanner('内奸现身');
+          await wait(600);
+          await tween(actors.spy, 'oy', 0, 10, 280);
+          actors.spy.dim = 0;
+          addEffect({type:'ring', x:actors.spy.x, y:actors.spy.footY-30, dur:500, color:'#ff9a3d'});
+          spawnParticles(actors.spy.x, actors.spy.footY-20, 12, '#ff9a3d', {vy:-0.6});
+          if(spyAction === 'A'){
+            await say('【内奸】均衡破坏者', 'n-spy',
+              '没意思……<span class="hl-spy">〔Mode A · 原始诉求放大〕</span>反贼，把灌入场景的难度拉满，接好这份「极端人格剧本」！');
+            await wait(400);
+            const buff = 16 + Math.floor(Math.random()*10);
+            addEffect({type:'ring', x:actors.rebel.x, y:actors.rebel.footY-30, dur:500, color:'#ff5c8a'});
+            spawnParticles(actors.rebel.x, actors.rebel.footY-20, 14, '#ff5c8a', {vy:-0.7});
+            popup(actors.rebel.x, actors.rebel.footY-72, '攻势 +' + buff, 'buff');
+            G.pressure = Math.min(100, G.pressure + buff);
+            tr.spy.lines.push('执行 Mode A：反贼攻势 +' + buff + '，下轮同型攻势自动升级；均衡信号清零');
+          } else {
+            const used = nerfTargets;
+            let targetId = (G.lastSkill && used.includes(G.lastSkill.id)) ? G.lastSkill.id : used[Math.floor(Math.random()*used.length)];
+            const sk = allSkills().find(function(s){ return s.id===targetId; });
+            const swapMode = Math.random() < 0.4 && targetId === 'partial';
+            tr.spy.lines.push('目标锁定：〔' + sk.name + '〕（优先最近使用的高价工具，打掉路径依赖）→ ' + (swapMode ? '方案替换：现金→券（用户更喜欢现金，但业务需要省成本）' : (G.skillStatus[targetId].mult >= 1.5 ? '冻结 2 轮（已加过价还在用）' : '成本 ×1.5 降级')));
+            if(swapMode){
+              G.skillStatus[targetId].disabled = 1;
+              await say('【内奸】均衡破坏者', 'n-spy',
+                '成本曲线太高了。<span class="hl-spy">〔Mode B · 方案替换〕</span>——<span class="hl-gold">〔' + sk.name + '〕</span>停用一轮：用户更喜欢现金，但业务需要省成本。忠臣，用券把这场谈下来！');
+              popup(actors.loyal.x, actors.loyal.footY-72, '现金→券 置换!', 'bad');
+            } else if(G.skillStatus[targetId].mult >= 1.5){
+              G.skillStatus[targetId].disabled = 2;
+              await say('【内奸】均衡破坏者', 'n-spy',
+                '成本已加过价还在用？<span class="hl-spy">〔Mode B · 工具冻结〕</span>——<span class="hl-gold">〔' + sk.name + '〕</span>冻结 2 轮，用零成本的办法解给我看。');
+              popup(actors.loyal.x, actors.loyal.footY-72, sk.name + ' 被冻结!', 'bad');
+            } else {
+              G.skillStatus[targetId].mult = 1.5;
+              await say('【内奸】均衡破坏者', 'n-spy',
+                '成本降级指令：<span class="hl-spy">〔Mode B · 工具降级〕</span>——<span class="hl-gold">〔' + sk.name + '〕</span>成本上调 50%，逼忠臣寻找更省的解法。');
+              popup(actors.loyal.x, actors.loyal.footY-72, sk.name + ' 成本×1.5', 'bad');
+            }
+            addEffect({type:'ring', x:actors.loyal.x, y:actors.loyal.footY-30, dur:500, color:'#c9a1ff'});
+            renderSkills();
+            if(trigger.source === 'chat') addMsg('sys', '⚠ 内奸介入（第 ' + G.interventions + ' 次）：' + (spyAction==='A'?'反贼情景升压':'忠臣工具降级/替换'), 'warn');
+          }
+          G.equilibrium = 0; G.stableRounds = 0;
+          await tween(actors.spy, 'oy', 10, 0, 280);
+          actors.spy.dim = 0.22;
+        }
+      }
+    } else if(Math.random() < 0.3 && trigger.source === 'chat'){
+      speech('spy', taunt('spyIdle'), 1400);
+    }
+
+    /* ---------- 仲裁史官记录 ---------- */
+    const net = G.resolution - before;
+    G.sandbox.roundLog.push({ r:G.round, t:info.type, lv:info.level, gain:effGain,
+      skill:skill, cost:cost, rg:resolveGain, net:net, spy:spyAction, res:Math.round(G.resolution) });
+    if(Math.abs(net) < 2) G.sandbox.stillStreak++; else G.sandbox.stillStreak = 0;
+    spawnParticles(actors.hist.x, actors.hist.footY-30, 6, '#46c8b0', {vy:-0.5, life:500});
+    popup(actors.hist.x, actors.hist.footY-64, trigger.source==='sandbox' ? '录' : '记', 'hist', true);
+    const spyTxt = ({A:'升压',B:'降级/替换',skip:'不搅局',retired:'退场',exhausted:'弹尽',none:'无'})[spyAction] || '无';
+    annals('R' + G.round + ' <span class="ar">反贼·' + info.type + 'Lv' + info.level + '(+' + effGain + ')</span> → <span class="al">忠臣·' + skill.name + (cost>0?'(' + fmtMoney(cost) + ')':'') + '</span> → <span class="as">内奸·' + spyTxt + '</span><br>研判：效率 <span class="stars">' + stars(cost, resolveGain) + '</span> ｜ 解决率 ' + Math.round(G.resolution) + '%');
+    tr.hist.lines.push('效率研判：化解 ' + resolveGain + ' ÷ (成本 ' + (cost+100) + ') = ' + (resolveGain/(cost+100)).toFixed(3) + ' → ' + stars(cost, resolveGain));
+    tr.hist.lines.push('走势：解决率 ' + Math.round(before) + '% → ' + Math.round(G.resolution) + '%（净 ' + (net>=0?'+':'') + net.toFixed(1) + '）｜ 均衡 ' + Math.round(G.equilibrium) + '% ｜ 攻势 ' + Math.round(G.pressure) + '%');
+    let arbTxt = '无死局信号，对练继续';
+    if(G.converged) arbTxt = '均衡收敛（Pareto 达成）→ 准备收官蒸馏';
+    else if(G.pressure>=95 && G.resolution<50) arbTxt = '⚠ 死局风险（攻势顶格 + 解决率停滞）';
+    else if(G.sandbox.stillStreak>=4) arbTxt = '⚠ 停滞保护线（连续 4 轮无净进展）';
+    else if(G.budget-G.spent<60) arbTxt = '⚠ 预算见底';
+    tr.hist.lines.push('仲裁检查：' + arbTxt + (trigger.source==='chat' ? '（C 端谈判场：留档不仲裁）' : ''));
+    tr.hist.lines.push('目标线动作：' + bandTxt);
+    if(G.cfg.exp.dualRun){
+      const dv = Math.abs(G.v2pred - Math.round(G.resolution));
+      tr.hist.lines.push('双跑对校：v1(规则)=' + Math.round(G.resolution) + '% ｜ v2(LLM·模拟)=' + G.v2pred + '% ｜ Δ=' + dv + (dv > 15 ? ' ⚠ 分歧>15，建议人工复核' : ' ✓ 一致'));
+    }
+    tr.hist.lines.push('留档：原文 + 三方思考已写入「对练全记录」，供蒸馏与审计回溯');
+    renderTraceCard(tr);
+
+    const spyLabel = spyAction==='A' ? '升压' : (spyAction==='B' ? '降级' : (spyAction==='skip' ? '不搅局' : (spyAction==='retired' ? '退场' : (spyAction==='exhausted' ? '弹尽' : '无'))));
+    G.history.push({ round:G.round, lost:G.resolution<40,
+      line:G.scenarioLabel + ' → ' + skill.name + (cost>0?'(' + fmtMoney(cost) + ')':'') + ' · 内奸:' + spyLabel + ' · 解决率' + Math.round(G.resolution) + '%' });
+    renderArena(); renderSkills(); renderHud();
+
+    // 收敛庆祝（仅聊天视图直接展示；沙箱由史官接管）
+    if(G.converged && !G.celebrated && trigger.source === 'chat'){
+      G.celebrated = true;
+      turnBanner('Pareto 收敛！', 'gold');
+      addEffect({type:'flash', dur:500});
+      for(let i=0;i<5;i++) setTimeout(function(){ spawnParticles(80+Math.random()*224, 40+Math.random()*80, 10, '#ffd76e', {vy:-0.5, life:900}); }, i*180);
+      await say('【系统】', 'n-sys', 'Pareto 收敛：解决率稳定于 ' + Math.round(G.resolution) + '%，总成本 ' + fmtMoney(G.spent) + '。');
+      addMsg('sys', '◆ 本场谈判收敛：解决率 ' + Math.round(G.resolution) + '% · 总成本 ' + fmtMoney(G.spent) + ' —— 已记入史册', 'gold');
+    }
+
+    G.busy = false; renderHud();
+    if(trigger.source === 'chat') $('sendBtn').disabled = false;
+  })();
+  roundPromise.catch(function(err){
+    console.error('round error', err);
+    G.busy = false; renderHud();
+    const sb = $('sendBtn'); if(sb) sb.disabled = false;
+    G.sandbox.running = false;
+  });
+  return roundPromise;
+}
+/* 成交收尾回合：共识达成 → 确认条款、停止报价，而非再打一轮 */
+async function closeDeal(trigger){
+  if(G.busy) return;
+  G.busy = true; renderHud();
+  if(trigger.source === 'chat') $('sendBtn').disabled = true;
+  G.round++;
+  SKILLS.forEach(function(sk){ const st=G.skillStatus[sk.id]; if(st && st.disabled>0) st.disabled--; });
+  const closeSk = SKILLS.find(function(s){ return s.id==='close'; });
+  turnBanner('\u2726 谈判成交', 'gold');
+  await wait(650);
+  const tr = { r:G.round, source:trigger.source, text:trigger.text, type:'共识达成', lv:0, gain:0,
+               rebel:{lines:[]}, loyal:{lines:[]}, spy:{lines:[]}, hist:{lines:[]}, reply:'' };
+  tr.rebel.lines.push('用户表态确认：「' + trigger.text + '」→ 攻势解除（压力归零），谈判进入收尾');
+  tr.rebel.lines.push('注意：此轮若忠臣继续抛新方案 = 重复报价（用户投诉点），必须走收尾确认');
+  await say('【反贼】情景模拟器', 'n-rebel',
+    '用户表态：「<span class="hl-gold">' + trigger.text + '</span>」——<span class="hl-gold">共识达成</span>，攻势解除。忠臣，别再报价了，收尾！');
+  speech('rebel', taunt('dealRebel'), 1300);
+  G.pressure = 0;
+  G.lastSkill = closeSk;
+  renderSkills('close'); renderHud();
+  await wait(500);
+  tr.loyal.lines.push('确认信号检测：命中成交检测（短句 + 确认词 + 无转折/否定）→ 共识达成');
+  tr.loyal.lines.push('决策：启用〔确认成交·收尾〕——复述最终条款 + 停止报价 + 进入执行，杜绝"您看可以吗"式重复询问');
+  await say('【忠臣】赔付谈判专员', 'n-loyal',
+    '用户已经确认方案了，我把最终条款复述一遍，剩下的交给执行流程。');
+  speech('loyal', taunt('dealLoyal'), 1300);
+  addEffect({type:'ring', x:actors.loyal.x, y:actors.loyal.footY-30, dur:500, color:'#ffd76e'});
+  spawnParticles(actors.loyal.x, actors.loyal.footY-20, 12, '#ffd76e', {vy:-0.6});
+  const reply = closeReplyText();
+  tr.reply = reply;
+  if(trigger.source === 'chat'){
+    showTyping();
+    await sleep(700);
+    hideTyping();
+    addMsg('agent', reply);
+  }
+  await say('【内奸】均衡破坏者', 'n-spy',
+    '都成交了……散了散了，这局我不搅。');
+  tr.spy.lines.push('触发评估：成交局 → 不搅局（共识已达成，无均衡可破）');
+  speech('spy', taunt('dealSpy'), 1200);
+  // 结算与史官
+  const before = G.resolution;
+  G.resolution = Math.min(100, G.resolution + 12);
+  G.equilibrium = Math.min(100, G.equilibrium + 18); G.stableRounds++;
+  addEffect({type:'flash', dur:500});
+  for(let i=0;i<4;i++) setTimeout(function(){ spawnParticles(80+Math.random()*224, 40+Math.random()*80, 10, '#ffd76e', {vy:-0.5, life:900}); }, i*160);
+  tr.hist.lines.push('成交记录：' + G.round + ' 轮达成一致 ｜ 总成本 ' + fmtMoney(G.spent) + ' ｜ 解决率 ' + Math.round(before) + '% → ' + Math.round(G.resolution) + '%');
+  tr.hist.lines.push('收尾质量：忠臣正确停报、复述条款 → 收尾能力写入技能路径');
+  tr.hist.lines.push('仲裁检查：谈判闭环完成，留档供蒸馏（收尾话术纳入技能路径）');
+  const net = G.resolution - before;
+  G.sandbox.roundLog.push({ r:G.round, t:'共识达成', lv:0, gain:0, skill:closeSk, cost:0, rg:12, net:net, spy:'skip', res:Math.round(G.resolution) });
+  G.sandbox.stillStreak = 0;
+  popup(actors.hist.x, actors.hist.footY-64, '录', 'hist', true);
+  annals('R' + G.round + ' <span class="ar">用户确认·共识达成</span> → <span class="al">忠臣·确认成交收尾（停止报价）</span><br>研判：<span class="stars">★★★</span> 谈判闭环 ｜ 解决率 ' + Math.round(G.resolution) + '%');
+  G.history.push({ round:G.round, lost:false, line:'共识达成 → 确认成交·收尾（停止报价） · 解决率' + Math.round(G.resolution) + '%' });
+  renderTraceCard(tr);
+  await say('【仲裁史官】', 'n-hist',
+    '<span class="hl-hist">谈判达成一致</span>：' + G.round + ' 轮收官，总成本 ' + fmtMoney(G.spent) + '，解决率 ' + Math.round(G.resolution) + '%。收尾话术已记入技能路径——请用户提交体验反馈，驱动技能迭代。');
+  if(trigger.source === 'chat'){
+    addMsg('sys', '\u2726 谈判已达成一致——请在下方反馈面板提交体验反馈（总评 + 三方面），驱动技能版本迭代', 'hist');
+  }
+  G.dealClosed = true;
+  G.lastOfferSkill = null;
+  renderArena(); renderHud();
+  G.busy = false; renderHud();
+  if(trigger.source === 'chat') $('sendBtn').disabled = false;
+}
+function tween(actor, prop, from, to, dur){
+  return new Promise(function(res){
+    const t0 = performance.now();
+    (function step(){
+      const p = Math.min(1, (performance.now()-t0)/dur);
+      actor[prop] = from + (to-from)*p;
+      if(p<1) setTimeout(step, 16); else res();
+    })();
+  });
+}
+
+/* =====================================================
+   沙箱对练运行器（第二步）
+===================================================== */
+const ESCALATIONS = {
+  '情理攻势': ['我等了这么久，你们就给我这个答复？今天必须给说法！','我今天必须拿到满意的方案，不然我没完！'],
+  '合规威胁': ['我已经在12315提交工单了，编号都出来了！','市场监管那边我也反映了，信不信立案调查你们！'],
+  '舆论威胁': ['我拍的视频已经剪好了，就差一个标题！','今晚八点准时发小红书和抖音，你们等着上热搜！'],
+  '法律威胁': ['律师函已经寄出了，15日内等着收！','法庭上见，诉讼费误工费我全都算进去！'],
+  '狮子大开口': ['少一分都不行，我的损失你们赔不起！','别跟我讨价还价，翻倍！不然没完！'],
+};
+function splitScenario(text){
+  return text.split(/\n|(?<=[。！？!?])/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length>2; });
+}
+function buildTurns(){
+  const turns = [], marks = [];
+  const fb = G.sandbox.feedback;
+  if(fb && fb.rating === 'bad'){
+    turns.push('上次的方案我不接受！这次没有更大诚意，直接升级处理！');
+    marks.push(-1);
+  }
+  if(fb){
+    // 策略决定反馈 → 反贼针对性挑战忠臣的策略选择（如"现金比券好"→ 反贼拒收券）
+    if(fb.strategy && /现金|券|优惠券/.test(fb.strategy)){
+      turns.push('别再拿优惠券糊弄我了，我只接受现金赔偿，这是底线！');
+      marks.push(-1);
+    }
+    // 进展推进反馈 → 反贼加测节奏施压（如"太慢"→ 用户拒绝拖延）
+    if(fb.progress && /慢|拖|久|来回|太长|磨/.test(fb.progress)){
+      turns.push('我不想再耗了，今天必须直接进入实质方案，别再走流程！');
+      marks.push(-1);
+    }
+    // 收尾能力反馈 → 剧本末尾追加成交确认测试（验证忠臣能否停止报价、正确收尾）
+    if(fb.closeIssue){
+      turns.push('行吧，那就按这个方案办！');
+      marks.push(-1);
+    }
+  }
+  G.scenarios.forEach(function(sc, si){
+    const parts = splitScenario(sc.text).slice(0,3);
+    const info = analyze(parts[0] || sc.text);
+    parts.forEach(function(p){ turns.push(p); marks.push(si); });
+    ESCALATIONS[info.type].forEach(function(e){ turns.push(e); marks.push(si); });
+  });
+  return { turns: turns.slice(0,12), marks: marks.slice(0,12) };
+}
+function arbitrationCheck(){
+  const sb = G.sandbox;
+  if(sb.stop) return sb.stop;
+  if(G.converged) return { type:'pass', reason:'均衡收敛，Pareto 达成' };
+  if(sb.roundIdx < sb.totalTurns && G.round >= (G.cfg.sandbox.depth.maxRounds || 12)) return { type:'cut', reason:'回合上限（防无限循环）' };
+  if(sb.turnIdx >= sb.totalTurns) return { type:'pass', reason:'剧本全部走完，谈判路径完整' };
+  if(G.round >= (G.cfg.sandbox.depth.maxRounds || 12)) return { type:'cut', reason:'回合上限（防无限循环）' };
+  if(G.pressure >= 95 && G.resolution < 50) return { type:'cut', reason:'攻势顶格且解决率停滞（死局风险）' };
+  const budgetFloor = G.cfg.sandbox.balance === 'cost' ? 300 : 60;
+  if(G.budget - G.spent < budgetFloor && sb.roundLog.length && Math.abs(sb.roundLog[sb.roundLog.length-1].net) < 3)
+    return { type:'cut', reason:'预算见底且无净进展（' + (G.cfg.sandbox.balance==='cost'?'成本优先·提前止损':'标准阈值') + '）' };
+  if(sb.stillStreak >= 4) return { type:'cut', reason:'连续 4 轮无净进展（停滞保护）' };
+  return null;
+}
+async function runSandbox(){
+  if(G.sandbox.running || G.busy) return;
+  if(!G.scenarios.length){ annals('史官：还没有灌入场景，回第一步补充剧本原料。', 'hist'); return; }
+  resetBattle();
+  const ps = G.pendingSkill;
+  if(ps){
+    G.extraSkills = G.extraSkills.filter(function(x){ return x.key !== ps.key; });
+    G.extraSkills.push(ps);
+    if(G.extraSkills.length > 4) G.extraSkills.shift();
+    G.skillStatus = freshSkillStatus();
+    annals('🧠 本轮沙箱已加载「反馈重训技能」〔' + ps.name + '〕：' + ps.fbNote + '——对练验证通过后再沉淀为新版本', 'gold');
+    G.pendingSkill = null;
+  }
+  G.sandbox.running = true; G.sandbox.stop = null; G.sandbox.roundLog = [];
+  G.sandbox.traces = [];
+  $('traceBody').innerHTML = '<div class="trace-empty">对练进行中——每回合结束后，原文与四角色内部决策思考将在此留档</div>';
+  $('traceCount').textContent = '0 回合';
+  G.sandbox.stillStreak = 0; G.sandbox.turnIdx = 0;
+  G.spyBudget = (G.cfg.sandbox.spy.budget || 3) + ((G.sandbox.feedback && G.sandbox.feedback.rating === 'bad') ? 1 : 0);
+  const built = buildTurns();
+  G.sandbox.totalTurns = built.turns.length;
+  SPEED = 0.55; typingMs = 13;
+  $('runBtn').disabled = true;
+  $('distillPanel').classList.remove('show');
+  $('histStatus').textContent = '史官状态：记录中';
+  $('scInfo').textContent = '🔥 对练中 · ' + G.sandbox.totalTurns + ' 轮剧本（进行中，不可重复启动）';
+  $('histProgress').textContent = '进度 0/' + G.sandbox.totalTurns;
+  renderHud();
+  const fb = G.sandbox.feedback;
+  const fbAspects = [];
+  if(fb && fb.lang) fbAspects.push('语言交互（话术层 → 蒸馏注记）');
+  if(fb && fb.progress) fbAspects.push('进展推进（反贼已加测节奏施压回合）');
+  if(fb && fb.closeIssue) fbAspects.push('收尾能力（剧本末尾加测成交确认，验证停止报价）');
+  if(fb && fb.strategy) fbAspects.push('策略决定（反贼已加测策略挑战回合）');
+  await say('【仲裁史官】', 'n-hist',
+    fb ? '收到用户反馈：' + (fb.rating==='bad'?'需要改进':'效果确认') + (fbAspects.length ? '，涉及 ' + fbAspects.join('；') : '') + '；反馈已转化为技能调整并加入本轮对练。新一轮开始——' + (fb.rating==='bad'?'反贼，把上次没打赢的地方加倍发难；内奸，你的预算+1。忠臣，注意用户在三方面的意见。':'本次侧重巩固既有打法，同时复测用户关切点。')
+       : '开卷。本轮共 <span class="hl-hist">' + G.sandbox.totalTurns + '</span> 个回合剧本，源自 ' + G.scenarios.length + ' 条灌入场景。反贼照剧本发难，忠臣用现有技能应对，内奸伺机搅局——一切皆入史册。');
+  annals('✒ 开卷：' + G.scenarios.length + ' 条灌入场景 → ' + G.sandbox.totalTurns + ' 回合剧本' + (fb ? '（含用户反馈调整）' : '') +
+    (G.cfg.scene.dataSource.enabled ? ' ｜ 外部数据源已配置（' + (G.cfg.scene.dataSource.api || '未填地址') + ' · 接口占位，当前使用本地灌入）' : ''), 'hist');
+  let lastMark = -2;
+  for(let i=0; i<built.turns.length; i++){
+    const mark = built.marks[i];
+    if(mark >= 0 && mark !== lastMark && G.scenarios[mark]){
+      const sc = G.scenarios[mark];
+      annals('▣ 场景 ' + (mark+1) + '：「' + ((sc.text.split('\n')[0])||'').slice(0,30) + '…」', 'gold');
+      lastMark = mark;
+    }
+    const scRef = (built.marks[i] >= 0) ? G.scenarios[built.marks[i]] : null;
+    if(isAgreement(built.turns[i]) && G.lastOfferSkill && !G.busy){
+      await closeDeal({ source:'sandbox', text: built.turns[i] });
+    } else {
+      await runRound({ source:'sandbox', text: built.turns[i], scenario: scRef });
+    }
+    G.sandbox.turnIdx = i+1;
+    $('histProgress').textContent = '进度 ' + G.sandbox.turnIdx + '/' + G.sandbox.totalTurns;
+    renderHud();
+    const stop = arbitrationCheck();
+    if(stop){ G.sandbox.stop = stop; break; }
+    await wait(500);
+  }
+  await arbiterFinish();
+  SPEED = 1; typingMs = 24;
+  G.sandbox.running = false;
+  $('runBtn').disabled = false;
+  $('runBtn').textContent = '▶ 再来一轮对练';
+  $('scInfo').textContent = '✦ 已沉淀 · 可进第三步体验，或点「再来一轮」继续磨';
+  renderHud();
+}
+async function arbiterFinish(){
+  const sb = G.sandbox;
+  const stop = sb.stop || { type:'pass', reason:'剧本走完' };
+  $('histStatus').textContent = '史官状态：仲裁中';
+  await tween(actors.hist, 'oy', 0, 12, 320);
+  actors.hist.dim = 0;
+  addEffect({type:'ring', x:actors.hist.x, y:actors.hist.footY-30, dur:600, color:'#46c8b0'});
+  spawnParticles(actors.hist.x, actors.hist.footY-24, 16, '#46c8b0', {vy:-0.6});
+  const best = bestRound();
+  turnBanner('仲裁史官 · 终局判定', 'hist');
+  await say('【仲裁史官】', 'n-hist',
+    '终局判定：<span class="hl-hist">' + (stop.type==='pass' ? '仲裁通过' : '仲裁终止') + '</span>——' + stop.reason + '。全 ' + G.round + ' 回合，总成本 <span class="hl-gold">' + fmtMoney(G.spent) + '</span>，终局解决率 <span class="hl-gold">' + Math.round(G.resolution) + '%</span>。最优对局片段：R' + (best ? best.r : '-') + '。开始蒸馏技能——');
+  annals('✒ 终局判定：' + (stop.type==='pass'?'仲裁通过':'仲裁终止') + '（' + stop.reason + '）· 最优片段 R' + (best?best.r:'-'), 'hist');
+  await wait(700);
+  const skill = distillSkill(stop, best);
+  turnBanner('技能沉淀', 'gold');
+  addEffect({type:'flash', dur:600});
+  for(let i=0;i<6;i++) setTimeout(function(){ spawnParticles(60+Math.random()*264, 30+Math.random()*90, 12, '#ffd76e', {vy:-0.5, life:900}); }, i*160);
+  spawnParticles(actors.hist.x, actors.hist.footY-30, 20, '#ffd76e', {vy:-0.8, life:800});
+  popup(actors.hist.x, actors.hist.footY-72, '技能蒸馏完成!', 'hist');
+  await say('【仲裁史官】', 'n-hist',
+    '技能入库：<span class="hl-gold">〔' + skill.name + '〕</span>。' + skill.descShort + ' 建议进入第三步加载体验，用真实对话检验成色。');
+  annals('✒ 技能沉淀：<b style="color:var(--gold)">〔' + skill.name + '〕</b>' + skill.descShort, 'gold');
+  revealDistill(skill);
+  $('histStatus').textContent = '史官状态：已沉淀';
+  await tween(actors.hist, 'oy', 12, 0, 320);
+  actors.hist.dim = 0.22;
+}
+function bestRound(){
+  const log = G.sandbox.roundLog;
+  if(!log.length) return null;
+  const wCost = 0.08 - (G.cfg.sandbox.balanceWeight / 100) * 0.07; // 滑杆微调：0=极致省钱 100=极致满意
+  const score = function(r){ return (r.rg*0.95 - r.gain*0.22) - r.cost * wCost; };
+  return log.reduce(function(a,b){ return score(b) > score(a) ? b : a; });
+}
+const PATTERN_NAMES = { reject:'守线举证法', comfort:'共情安抚法', close:'收尾成交法', coupon:'权益置换法', expert:'专家背书法', partial:'阶梯赔付法', full:'一次到位法' };
+const TYPE_WORDS = { '舆论威胁':'舆情', '合规威胁':'合规', '法律威胁':'涉法', '狮子大开口':'高额', '情理攻势':'常规' };
+const PATH_DESCS = { comfort:'共情安抚稳定情绪', reject:'合规守线要求举证', close:'确认成交收尾（复述条款·停止报价）', coupon:'¥200 权益置换', expert:'专家通道建立信任', partial:'按举证 60% 阶梯赔付', full:'全额一次到位' };
+function distillSkill(stop, best){
+  const sb = G.sandbox;
+  const log = sb.roundLog;
+  const counts = {};
+  log.forEach(function(r){ if(r.skill.id!=='comfort') counts[r.skill.id]=(counts[r.skill.id]||0)+1; });
+  if(!Object.keys(counts).length) counts.comfort = log.length;
+  const patternId = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; })[0][0];
+  const typeCounts = {};
+  log.forEach(function(r){ typeCounts[r.t]=(typeCounts[r.t]||0)+1; });
+  const domType = Object.entries(typeCounts).sort(function(a,b){ return b[1]-a[1]; })[0][0];
+  // 主导技能若是已加载的蒸馏技能 → 同名迭代增强（技能血统延续），否则新建
+  const fbBase = G.extraSkills.find(function(s){ return s.fromFeedback || /_retrain_/.test(s.id); });
+  const prevExtra = fbBase || G.extraSkills.find(function(s){ return s.id===patternId; });
+  const key = prevExtra
+    ? String(prevExtra.key || prevExtra.name || '').replace(/\s*v\d+$/,'')
+    : ((TYPE_WORDS[domType] || '常规') + '·' + (PATTERN_NAMES[patternId] || '组合应对法'));
+  const ver = (G.skillVersions[key] = (G.skillVersions[key]||0)+1);
+  const name = key + ' v' + ver;
+  const seen = {}, path = [];
+  log.forEach(function(r){ if(!seen[r.skill.id]){ seen[r.skill.id]=1; path.push(r.skill.id); } });
+  let pathDesc = path.map(function(id){
+    const ex = G.extraSkills.find(function(s){ return s.id===id; });
+    return ex ? ex.pathDesc : (PATH_DESCS[id]||id);
+  }).join(' → ');
+  // 反馈建议直接改写处理路径（真正"生效"，而非只留一句注记）
+  if(fbBase && fbBase.pathDesc){
+    const fbSteps = String(fbBase.pathDesc).split(' → ').filter(function(x){ return x && x !== pathDesc; });
+    if(fbSteps.length) pathDesc = fbSteps.join(' → ') + ' → ' + pathDesc;
+  }
+  const power = prevExtra
+    ? Math.min(48, prevExtra.power + 2 + Math.round(G.resolution/12))   // 迭代增强
+    : Math.min(46, 30 + Math.round(G.resolution/5));
+  const cost = Math.max(0, Math.min(1600, Math.round(G.spent / Math.max(1, log.length) / 10) * 10));
+  const iterNote = prevExtra ? '本版在 v' + prevExtra.version + ' 基础上经反贼加压复测迭代。' : '';
+  const desc = '针对【' + domType + '】类疑难场景验证的谈判技能。核心打法：' + pathDesc + '。沙箱验证 ' + log.length + ' 回合 · 总成本 ' + fmtMoney(G.spent) + ' · 终局解决率 ' + Math.round(G.resolution) + '% · 经受内奸 ' + G.interventions + ' 次干预（含现金换券压力测试）。' + iterNote;
+  const fb = sb.feedback;
+  let fbNote = '';
+  if(fb && ver > 1){
+    const parts = [];
+    if(fb.lang) parts.push('语言交互：' + fb.lang);
+    if(fb.progress) parts.push('进展推进：' + fb.progress);
+    if(fb.strategy) parts.push('策略决定：' + fb.strategy);
+    fbNote = (fbBase ? '第三步反馈重训 → 沙箱加压复测 → 本次沉淀：' : '本版变更：') +
+      '吸纳用户反馈（' + (fb.rating==='bad'?'需改进':'确认有效') + '）' + (parts.length ? '——' + parts.join('；') : '') + '。经' + (fb.rating==='bad'?'反贼加压复测通过':'巩固性复测确认') + '。';
+    if(fb.lang) fbNote += '（话术层注记已登记，供话术库迭代）';
+  }
+  return {
+    id:'x_' + key + '_' + ver,
+    key:key, name:name, version:ver, patternId:patternId, matchType:domType,
+    cost:cost, power:power, pathDesc:pathDesc, desc:desc, fbNote:fbNote,
+    descShort: '应对' + domType + '场景：' + pathDesc + '（' + log.length + '回合验证，解决率' + Math.round(G.resolution) + '%）。',
+    useCases: G.scenarios.map(function(s){ return splitScenario(s.text)[0]; }).filter(Boolean).slice(0,3),
+  };
+}
+function revealDistill(skill){
+  $('dName').textContent = skill.name;
+  $('dVer').textContent = '仲裁史官蒸馏产出 · ' + (G.sandbox.stop ? G.sandbox.stop.reason : '完整剧本验证');
+  $('dStats').innerHTML =
+    '针对场景：<b>' + skill.matchType + '</b><br>' +
+    '使用成本：<b>' + (skill.cost===0?'¥0':fmtMoney(skill.cost)) + '</b> ｜ 力度：<b>P' + skill.power + '</b><br>' +
+    '验证回合：<b>' + G.sandbox.roundLog.length + '</b> ｜ 总成本：<b>' + fmtMoney(G.spent) + '</b><br>' +
+    '终局解决率：<b>' + Math.round(G.resolution) + '%</b> ｜ 内奸干预：<b>' + G.interventions + ' 次</b>';
+  $('dDesc').innerHTML = skill.desc;
+  $('dTags').innerHTML = skill.pathDesc.split(' → ').map(function(p){ return '<span class="skd-tag path-step">' + p + '</span>'; }).join('→');
+  $('dFeedback').textContent = skill.fbNote || '';
+  $('distillPanel').classList.add('show');
+  G.sandbox.lastSkill = skill;
+  renderHud();
+}
+
+/* =====================================================
+   视图管理
+===================================================== */
+function switchView(n){
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  $('view'+n).classList.add('active');
+  document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+  $('step'+n+'Btn').classList.add('active');
+  if(n === 2){
+    $('stageSlot2').appendChild(stageWrap);
+    $('dlgSlot2').appendChild(rpgBox);
+  } else if(n === 3){
+    $('stageSlot3').appendChild(stageWrap);
+    $('dlgSlot3').appendChild(rpgBox);
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+$('traceToggle').onclick = function(){
+  const f = $('traceFold');
+  f.classList.toggle('open');
+  this.querySelector('.tw').textContent = f.classList.contains('open') ? '▾ 点击收起' : '▸ 点击展开';
+  if(f.classList.contains('open')){ const b = $('traceBody'); b.scrollTop = b.scrollHeight; }
+};
+$('step1Btn').onclick = function(){ switchView(1); };
+$('step2Btn').onclick = function(){ switchView(2); };
+$('step3Btn').onclick = function(){ switchView(3); };
+$('stageSlot2').appendChild(stageWrap);
+$('dlgSlot2').appendChild(rpgBox);
+
+/* =====================================================
+   第一步：灌入
+===================================================== */
+const scInput = $('scInput');
+let scDraft = { persona:null, difficulty:null, evidenceStrict:null, crm:null };
+const PERSONA_CYCLE = [null, '理性协商', '情绪主导', '专业索赔', '职业敲诈', '多次维权老客'];
+const DIFF_CYCLE = [null, '1', '2', '3'];
+const EV_CYCLE = [null, 'loose', 'strict'];
+const EV_NAMES = { null:'标准（自动）', 'loose':'宽松', 'strict':'严格' };
+let scDraftIdx = { persona:0, difficulty:0, evidenceStrict:0 };
+function draftScenario(){
+  return { persona: scDraft.persona, difficulty: scDraft.difficulty, evidenceStrict: scDraft.evidenceStrict,
+    crm: (scDraft.crm && (scDraft.crm.complaints || scDraft.crm.creditScore)) ? scDraft.crm : null };
+}
+function renderTags(){
+  const t = scInput.value.trim();
+  const first = splitScenario(t)[0] || t;
+  // 人格（来源标注：手动 / 全局默认 / CRM特征 / 推断）——用全文推断：人格是场景级属性，不随单句波动
+  const pBtn = $('tagPersona');
+  const per = effectivePersonaFor(draftScenario(), t || '默认');
+  const srcLabel = { '文本推断':'推断', '全局默认':'全局默认', '全局CRM特征':'CRM特征', '场景CRM特征':'CRM特征' }[per.src] || '推断';
+  if(scDraft.persona){
+    pBtn.textContent = scDraft.persona + '（手动）';
+    pBtn.className = 'st-chip manual';
+    pBtn.title = '当前：' + scDraft.persona + '（场景标签手动设置，优先级最高）\n不选时的结果：' + per.p + '（' + srcLabel + '）\n点击切换其他人格（点回首项恢复自动）';
+  } else {
+    pBtn.textContent = per.p + '（' + srcLabel + '）';
+    pBtn.className = 'st-chip' + (srcLabel === '全局默认' || srcLabel === 'CRM特征' ? ' linked' : '');
+    pBtn.title = '当前：' + per.p + '（' + per.src + '）\n依据：' + (per.src === '文本推断' ? personaReason(t || '') : (per.src === '全局默认' ? '配置中心·人格默认（手动选择）' : 'CRM统计特征（投诉次数/信用分）')) + '\n优先级：场景标签 ＞ 全局默认 ＞ 自动推断\n点击切换其他人格';
+  }
+  // 难度（引擎识别 ⊕ 全局基线 → 生效值）
+  const dBtn = $('tagDiff');
+  const info = first ? analyze(first) : null;
+  const gDiff = G.cfg.scene.difficulty;
+  if(scDraft.difficulty){
+    dBtn.textContent = 'Lv.' + scDraft.difficulty + '（手动）';
+    dBtn.className = 'st-chip manual';
+    dBtn.title = '难度手动固定为 Lv.' + scDraft.difficulty + '\n点击切换（点回首项恢复自动）';
+  } else {
+    const rawLv = info ? info.level : null;
+    const effLv = gDiff !== 'auto' ? +gDiff : rawLv;
+    dBtn.textContent = '自动（' + (effLv ? 'Lv.' + effLv : '待输入') + '）';
+    dBtn.className = 'st-chip' + (gDiff !== 'auto' ? ' linked' : '');
+    dBtn.title = (rawLv ? '引擎识别：Lv.' + rawLv : '输入后引擎自动识别等级')
+      + (gDiff !== 'auto' ? '\n全局设定（配置中心）：Lv.' + gDiff + ' → 设定即生效' : '')
+      + (effLv ? '\n生效：Lv.' + effLv : '')
+      + '\n点击手动固定本场景难度';
+  }
+  // 证据（标准/宽松/严格，反映全局默认）
+  const eBtn = $('tagEv');
+  if(scDraft.evidenceStrict){
+    eBtn.textContent = EV_NAMES[scDraft.evidenceStrict] + '（手动）';
+    eBtn.className = 'st-chip manual';
+    eBtn.title = '证据严格度：' + (scDraft.evidenceStrict==='loose' ? '宽松（口头主张即认可，中性→强）' : '严格（强证据需核验，强→中性；人身损害证据除外）') + '\n点击切换（点回首项恢复自动）';
+  } else if(G.cfg.scene.evidenceStrict && G.cfg.scene.evidenceStrict !== 'standard'){
+    eBtn.textContent = EV_NAMES[G.cfg.scene.evidenceStrict] + '（全局默认）';
+    eBtn.className = 'st-chip linked';
+    eBtn.title = '配置中心全局默认：' + (G.cfg.scene.evidenceStrict==='loose' ? '宽松（中性证据→强，更易解锁高赔付）' : '严格（一般强证据→中性，需凭证核验；人身损害证据除外）') + '\n本场景可点击切换覆写';
+  } else {
+    eBtn.textContent = '标准（自动）';
+    eBtn.className = 'st-chip';
+    eBtn.title = '标准证据判定\n宽松：中性证据视为强（更易解锁高赔付）\n严格：一般强证据视为中性（需凭证核验）\n点击切换本场景覆写；全局默认在配置中心设置';
+  }
+  updateLinkBanner();
+}
+function updateLinkBanner(){
+  const b = $('scLinkBanner'); if(!b) return;
+  const parts = [];
+  if(G.cfg.scene.persona !== 'auto') parts.push('人格默认「' + G.cfg.scene.persona + '」');
+  if(G.cfg.scene.difficulty !== 'auto') parts.push('难度设定 Lv.' + G.cfg.scene.difficulty);
+  if(G.cfg.scene.evidenceStrict && G.cfg.scene.evidenceStrict !== 'standard') parts.push('证据「' + EV_NAMES[G.cfg.scene.evidenceStrict] + '」');
+  if(parts.length){
+    b.style.display = 'block';
+    b.innerHTML = '⚙ 全局默认联动中：' + parts.join(' ｜ ') + ' —— 已实时作用于下方标签与引擎；本页标签可逐场景覆写（优先级：场景标签 ＞ 全局默认 ＞ 推断）';
+  } else { b.style.display = 'none'; }
+}
+function bindTagCycle(btnId, key, cycleArr, draftKey){
+  $(btnId).onclick = function(){
+    scDraftIdx[key] = (scDraftIdx[key] + 1) % cycleArr.length;
+    scDraft[draftKey] = cycleArr[scDraftIdx[key]];
+    renderTags();
+  };
+}
+bindTagCycle('tagPersona', 'persona', PERSONA_CYCLE, 'persona');
+bindTagCycle('tagDiff', 'difficulty', DIFF_CYCLE, 'difficulty');
+bindTagCycle('tagEv', 'evidenceStrict', EV_CYCLE, 'evidenceStrict');
+$('scAdvToggle').onclick = function(){
+  const b = $('scAdvBox');
+  b.classList.toggle('open');
+  this.textContent = b.classList.contains('open') ? '▾ 高级（CRM统计特征）' : '▸ 高级（CRM统计特征）';
+};
+function readDraftCrm(){
+  const c = +$('scCrmComplaints').value || 0;
+  const p = +$('scCrmPayout').value || 0;
+  const s = +$('scCrmCredit').value || 0;
+  scDraft.crm = (c || p || s) ? { complaints: c, payoutTotal: p, creditScore: s } : null;
+}
+['scCrmComplaints','scCrmPayout','scCrmCredit'].forEach(function(id){
+  $(id).addEventListener('input', readDraftCrm);
+});
+function renderLive(){
+  const t = scInput.value.trim();
+  const la = $('liveAnalysis');
+  if(!t){ la.innerHTML = '<span class="la-label">≫ 引擎实时解读：输入后自动识别攻势类型 / 等级 / 证据强度 / 人身损害标记</span>'; renderTags(); return; }
+  const first = splitScenario(t)[0] || t;
+  const info = analyze(first);
+  // 生效值 = 引擎识别 ⊕ 全局默认（与沙箱实际执行一致）
+  const gDiff = G.cfg.scene.difficulty;
+  const effLv = gDiff !== 'auto' ? +gDiff : info.level;
+  const effGain = (effLv !== info.level) ? Math.max(5, Math.min(34, info.gain + 3 * (effLv - info.level))) : info.gain;
+  const gEv = G.cfg.scene.evidenceStrict;
+  const rawEv = info.evidence;
+  const effEv = applyEvStrict(rawEv, gEv, first);
+  const evNote = (effEv !== rawEv) ? '（' + (gEv==='loose' ? '宽松：中性→强' : '严格：强→中性') + '）' : '';
+  la.innerHTML = '<span class="la-label">≫ 引擎解读：</span>' +
+    '<span class="chip c-rebel">' + info.type + ' Lv.' + effLv + (effLv !== info.level ? '（全局设定）' : '') + ' · 攻势+' + effGain + '</span>' +
+    '<span class="chip ' + (effEv==='strong'?'c-gold':(effEv==='weak'?'c-rebel':'')) + '">证据：' + (effEv==='strong'?'强（可解锁全额/伤害下限）':(effEv==='weak'?'弱（高要价将触发合规拒绝）':'中性')) + evNote + '</span>' +
+    (info.harm ? '<span class="chip c-spy">⚠ 人身损害标记（触发赔付下限）</span>' : '') +
+    '<span class="chip">预计 ' + splitScenario(t).length + ' 轮剧本 + 2 轮升级</span>';
+  renderTags();
+}
+scInput.addEventListener('input', renderLive);
+document.querySelectorAll('[data-tpl]').forEach(function(b){
+  b.onclick = function(){ scInput.value = b.dataset.tpl; renderLive(); scInput.focus(); };
+});
+function renderQueue(){
+  const list = $('sqList');
+  if(!G.scenarios.length){
+    list.innerHTML = '<div class="ann-line hist" style="border-left-color:var(--line2);color:var(--faint)">暂无场景——灌入至少 1 条后可进入第二步</div>';
+  } else {
+    list.innerHTML = G.scenarios.map(function(s, i){
+      const info = analyze(splitScenario(s.text)[0] || s.text);
+      const persona = s.persona ? s.persona : effectivePersonaFor(s, s.text).p;
+      const effL = effectiveLevel(s, info.level) || info.level;
+      return '<div class="sq-item"><span class="sq-no">' + (i+1) + '</span><span class="sq-text">' + s.text.replace(/</g,'&lt;').replace(/\n/g,' ⏎ ') + '</span>' +
+        '<span class="sq-tag chip c-rebel">' + info.type + ' Lv.' + effL + (effL !== info.level ? '·设定' : '') + '</span>' +
+        '<span class="sq-ptag">👤' + persona + (s.persona ? '·标' : '') + '</span>' +
+        (s.difficulty ? '<span class="sq-dtag">Lv.' + s.difficulty + '·标</span>' : '') +
+        (s.evidenceStrict ? '<span class="sq-dtag">证据' + EV_NAMES[s.evidenceStrict] + '</span>' : '') +
+        (s.source==='feedback' ? '<span class="sq-tag chip c-hist">反馈回灌</span>' : '') +
+        '<button class="sq-del" data-i="' + i + '">✕</button></div>';
+    }).join('');
+    list.querySelectorAll('.sq-del').forEach(function(b){
+      b.onclick = function(){ G.scenarios.splice(+b.dataset.i,1); renderQueue(); renderHud(); };
+    });
+  }
+  $('toStep2Btn').disabled = G.scenarios.length === 0;
+  renderHud();
+}
+$('scAddBtn').onclick = function(){
+  const t = scInput.value.trim();
+  if(t.length < 5) return;
+  readDraftCrm();
+  G.scenarios.push({ text:t, source:'manual', persona:scDraft.persona, difficulty:scDraft.difficulty, evidenceStrict:scDraft.evidenceStrict, crm:draftScenario().crm });
+  scInput.value = '';
+  scDraft = { persona:null, difficulty:null, evidenceStrict:null, crm:null };
+  scDraftIdx = { persona:0, difficulty:0, evidenceStrict:0 };
+  $('scCrmComplaints').value = ''; $('scCrmPayout').value = ''; $('scCrmCredit').value = '';
+  renderLive(); renderQueue();
+  annals('✒ 收录场景 ' + G.scenarios.length + '：「' + (t.split('\n')[0]).slice(0,26) + '…」', 'hist');
+};
+$('toStep2Btn').onclick = function(){
+  switchView(2);
+  if(!G.sandbox.running && !G.sandbox.stop) runSandbox();
+  else if(!G.sandbox.running && G.sandbox.stop) annals('史官：上轮已沉淀技能。可点「重新对练」再跑，或直接进第三步体验。', 'hist');
+};
+
+/* =====================================================
+   第二步：控制
+===================================================== */
+$('runBtn').onclick = function(){ runSandbox(); };
+
+/* =====================================================
+   第三步：加载技能 + 体验 + 反馈
+===================================================== */
+$('loadSkillBtn').onclick = function(){
+  const sk = G.sandbox.lastSkill;
+  if(!sk) return;
+  G.extraSkills = G.extraSkills.filter(function(s){ return s.key !== sk.key; });
+  G.extraSkills.push({ id:sk.id, key:sk.key, name:sk.key, version:sk.version, cost:sk.cost, power:sk.power,
+    matchType:sk.matchType, patternId:sk.patternId, pathDesc:sk.pathDesc });
+  if(G.extraSkills.length > 4) G.extraSkills.shift();
+  G.skillStatus = freshSkillStatus();
+  resetBattle();
+  G.chatTranscript = [];
+  const qr = $('quickRow');
+  qr.innerHTML = '<span class="q-label">≫ <b>体验剧本</b>（仲裁史官依据灌入场景生成，点击发送开始体验）</span>';
+  const cases = (sk.useCases && sk.useCases.length ? sk.useCases : ['你们的赔付方案我不同意，必须重新谈！']);
+  cases.forEach(function(u){
+    const b = document.createElement('button');
+    b.className = 'q-chip uc';
+    b.textContent = u.length>24 ? u.slice(0,24)+'…' : u;
+    b.title = u;
+    b.onclick = function(){ sendMessage(u); };
+    qr.appendChild(b);
+  });
+  $('chatLog').innerHTML = '';
+  addMsg('sys', '📦 谈判专员已完成本类场景的专项准备，可以开始体验了。', 'gold');
+  addMsg('sys', '✒ 仲裁史官：体验后请在下方提交反馈（有效/需改进+建议），你的反馈与对话原文将回灌沙箱，驱动技能版本迭代。', 'hist');
+  addMsg('agent', OPENING_VARIANTS[G.round % OPENING_VARIANTS.length]);
+  switchView(3);
+  renderHud(); renderSkills();
+};
+async function sendMessage(text){
+  text = (text||'').trim();
+  if(!text || G.busy) return;
+  if(isAgreement(text)){
+    if(G.dealClosed){
+      addMsg('agent', RE_CONFIRM_VARIANTS[G.round % RE_CONFIRM_VARIANTS.length]);
+      return;
+    }
+    if(G.lastOfferSkill && G.round > 0){
+      addMsg('user', text.replace(/</g,'&lt;'), '反贼解读：共识达成 → 触发收尾确认（停止报价）');
+      await closeDeal({ source:'chat', text:text });
+      return;
+    }
+  }
+  const info0 = analyze(text);
+  addMsg('user', text.replace(/</g,'&lt;'),
+    '反贼解读：' + info0.type + ' Lv.' + info0.level + ' → 攻势 +' + info0.gain);
+  G.chatTranscript.push(text);
+  $('chatInput').value = '';
+  await runRound({ source:'chat', text:text });
+}
+$('sendBtn').onclick = function(){ sendMessage($('chatInput').value); };
+$('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter') sendMessage($('chatInput').value); });
+
+let fbRating = null;
+let fbPending = false;
+$('fbToggle').onclick = function(){
+  const p = $('fbPanel');
+  p.classList.toggle('open');
+  this.querySelector('.tw').textContent = p.classList.contains('open') ? '▾ 收起' : '▸ 展开填写';
+};
+$('fbGood').onclick = function(){
+  fbRating = 'good'; this.classList.add('sel-good'); $('fbBad').classList.remove('sel-bad');
+  $('fbFields').classList.remove('show');
+  $('fbActionHint').textContent = '👍 模式：直接提交总评（无需填写细节），技能打法予以巩固';
+};
+$('fbBad').onclick = function(){
+  fbRating = 'bad'; this.classList.add('sel-bad'); $('fbGood').classList.remove('sel-good');
+  $('fbFields').classList.add('show');
+  $('fbActionHint').textContent = '👎 模式：三方面反馈（字数不限，均可留空）将分路回灌沙箱，反贼加压复测';
+};
+$('fbSubmit').onclick = async function(){
+  if(fbPending){ addMsg('sys','✒ 仲裁史官：反馈已在队列中，沙箱即将开练，请稍候。','hist'); return; }
+  if(!fbRating){
+    $('fbPanel').classList.add('open');
+    $('fbToggle').querySelector('.tw').textContent = '▾ 收起';
+    addMsg('sys','✒ 仲裁史官：请先点亮总评 👍（技能有效·直接提交）或 👎（需要改进·展开三方面反馈）。','hist');
+    return;
+  }
+  const lang = fbRating === 'bad' ? $('fbLang').value.trim() : '';
+  const progress = fbRating === 'bad' ? $('fbProgress').value.trim() : '';
+  const strategy = fbRating === 'bad' ? $('fbStrategy').value.trim() : '';
+  G.sandbox.feedback = { rating:fbRating, lang:lang, progress:progress, strategy:strategy };
+  // 分路回灌宣告（含收尾能力专项路由）
+  const closeIssue = /重复|满意|询问|达成|一致|成交|收尾|结束|确认|停不下来|还在问/.test((lang + ' ' + progress + ' ' + strategy).trim());
+  G.sandbox.feedback.closeIssue = closeIssue;
+  const routes = [];
+  if(lang) routes.push('语言交互→史官（话术层注记）');
+  if(progress) routes.push('进展推进→反贼（节奏施压）');
+  if(strategy) routes.push('策略决定→反贼+忠臣（策略复测）');
+  if(closeIssue) routes.push('收尾能力→沙箱末尾加测「成交确认」回合（验证停止报价）');
+  annals('✒ 用户反馈（' + (fbRating==='good'?'👍 技能有效':'👎 需要改进') + '）：' +
+    (lang ? '语言「' + lang.slice(0,40) + (lang.length>40?'…':'') + '」' : '') +
+    (progress ? ' ｜ 进展「' + progress.slice(0,40) + (progress.length>40?'…':'') + '」' : '') +
+    (strategy ? ' ｜ 策略「' + strategy.slice(0,40) + (strategy.length>40?'…':'') + '」' : ''), 'gold');
+  if(routes.length) annals('✒ 分路回灌：' + routes.join(' ｜ '), 'gold');
+  addMsg('sys', '✒ 反馈已登记（' + (fbRating==='good'?'技能有效':'需要改进') + '）。' +
+    (routes.length ? '回灌路由：' + routes.join('；') + '。' : '') +
+    '即将回到沙箱开启新一轮对练，蒸馏技能版本迭代。', 'hist');
+  if(G.chatTranscript.length){
+    G.scenarios.push({ text:G.chatTranscript.join('\n'), source:'feedback' });
+    annals('✒ 对话原文已回灌为新一轮场景（' + G.chatTranscript.length + ' 轮）', 'gold');
+  }
+  // ★ 反馈不再只是文字注记：由大模型（或规则回退）基于反馈重训技能，再送进沙箱验证
+  const baseSkill = G.extraSkills[G.extraSkills.length-1] || G.sandbox.lastSkill || null;
+  $('scInfo').textContent = '🧠 正在基于第三步反馈重训技能…';
+  const trained = await retrainFromFeedback(G.sandbox.feedback, G.chatTranscript, baseSkill);
+  G.pendingSkill = trained;
+  annals('🧠 已基于第三步反馈' + (trained.source==='llm'?'由大模型':'由规则引擎') + '重训技能：〔' + trained.name + '〕——' + trained.fbNote, 'gold');
+  addMsg('sys', '🧠 反馈已转化为技能调整：' + trained.fbNote + '。即将回到第二步，把新技能放进沙箱重新对练、验证通过后再沉淀。', 'gold');
+  fbRating = null;
+  fbPending = true;
+  this.disabled = true;
+  this.textContent = '⏳ 已入队，等待沙箱开练…';
+  $('fbGood').classList.remove('sel-good'); $('fbBad').classList.remove('sel-bad');
+  $('fbFields').classList.remove('show');
+  $('fbActionHint').textContent = '提交后：反馈与对话原文将自动回灌第一步场景队列，驱动技能版本迭代';
+  $('fbLang').value = ''; $('fbProgress').value = ''; $('fbStrategy').value = '';
+  renderQueue();
+  switchView(2);
+  // 排队等待：若用户在回合进行中提交反馈，等当前回合结束后自动开练（带状态提示，绝不静默丢失）
+  const startWhenFree = function(){
+    if(G.sandbox.running || G.busy){
+      $('scInfo').textContent = '⏳ 等待当前回合结束，即将自动开练…';
+      setTimeout(startWhenFree, 400);
+      return;
+    }
+    fbPending = false;
+    const btn = $('fbSubmit');
+    btn.disabled = false;
+    btn.textContent = '提交反馈 → 回到沙箱再练（三方面分路回灌）';
+    runSandbox();
+  };
+  $('scInfo').textContent = G.busy ? '⏳ 等待当前回合结束，即将自动开练…' : '⏳ 即将开始新一轮对练…';
+  setTimeout(startWhenFree, 600);
+};
+
+/* =====================================================
+   配置中心 · 样板间（预置配置包）
+===================================================== */
+const PRESETS = [
+  { id:'default', name:'🚀 快速上手', desc:'零门槛冷启动：全部默认值，灌入场景即可开练。',
+    tags:['均衡策略','标准三池','目标值中位'], cfg:{} },
+  { id:'cost', name:'💰 成本管控', desc:'利润薄、赔付频次高的电商零售：守门人模式，能用券不用现金，证据从严。',
+    tags:['成本优先','券池×3','内奸偏降本','目标值下调'],
+    cfg:{ scene:{ evidenceStrict:'strict' },
+      sandbox:{ balance:'cost', balanceWeight:20,
+        pools:{ cash:3000, coupon:6000, service:600 },
+        spy:{ budget:4, mode:'cost' },
+        targets:{ '情理攻势':75,'合规威胁':70,'舆论威胁':65,'法律威胁':50,'狮子大开口':40 } } } },
+  { id:'premium', name:'💎 高端服务', desc:'高客单价会员制业务：质量督察模式，现金池加大，首回合即出实质方案，话术亲和。',
+    tags:['满意度优先','现金池×2','激进让步','亲和话术'],
+    cfg:{ sandbox:{ balance:'sat', balanceWeight:80,
+        pools:{ cash:12000, coupon:4000, service:2000 },
+        targets:{ '情理攻势':90,'合规威胁':85,'舆论威胁':85,'法律威胁':65,'狮子大开口':55 } },
+      exp:{ style:'friendly', pace:'aggressive' } } },
+  { id:'safe', name:'🛡 稳健合规', desc:'食品/医药等强监管行业：红线全开，1 轮未达标即预警人工，目标保守留余量。',
+    tags:['红线全开','1轮即预警','证据严格','目标保守'],
+    cfg:{ scene:{ evidenceStrict:'strict' },
+      sandbox:{ targets:{ '情理攻势':70,'合规威胁':60,'舆论威胁':60,'法律威胁':45,'狮子大开口':35 } },
+      exp:{ humanHandoff:{ predFloor:50, lowPredRounds:1, amountLimit:10000,
+        redlines:['人身损害','食品安全','疑似欺诈','涉未成年人','大V舆情'] } } } },
+  { id:'hell', name:'⚔ 地狱压测', desc:'沙箱深度打磨技能用：难度设定 Lv.3 拉满，内奸预算 ×6，20 回合深度对练。',
+    tags:['难度设定Lv.3','内奸×6','回合上限20'],
+    cfg:{ scene:{ difficulty:'3' },
+      sandbox:{ spy:{ budget:6, mode:'auto' }, depth:{ maxRounds:20, convergeEq:60 } } } },
+];
+let activePreset = 'default';
+function deepMerge(base, over){
+  for(const k in over){
+    if(over[k] && typeof over[k] === 'object' && !Array.isArray(over[k])
+       && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])){
+      deepMerge(base[k], over[k]);
+    } else { base[k] = over[k]; }
+  }
+  return base;
+}
+/* 配置持久化：localStorage 保存/恢复（全局重置与页面刷新后配置保留） */
+function saveCfg(){
+  try{ localStorage.setItem('sgg_cfg_v1', JSON.stringify({ cfg: G.cfg, preset: activePreset })); }catch(e){}
+}
+function loadCfg(){
+  try{
+    const raw = localStorage.getItem('sgg_cfg_v1');
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(data && data.cfg) G.cfg = deepMerge(deepCopy(DEFAULT_CFG), data.cfg);
+    if(data && data.preset) activePreset = data.preset;
+  }catch(e){}
+}
+function applyPoolsIfClean(){
+  if(G.poolSpent.cash === 0 && G.poolSpent.coupon === 0 && G.poolSpent.service === 0){
+    const persona = effectivePersona();
+    G.pools.cash = Math.round(G.cfg.sandbox.pools.cash * (persona === '多次维权老客' ? 1.5 : 1));
+    G.pools.coupon = G.cfg.sandbox.pools.coupon;
+    G.pools.service = G.cfg.sandbox.pools.service;
+    G.budget = G.pools.cash;
+  }
+}
+function renderPresets(){
+  const row = $('cfgPresets'); if(!row) return;
+  row.innerHTML = '';
+  PRESETS.forEach(function(p){
+    const isActive = activePreset === p.id;
+    const card = document.createElement('div');
+    card.className = 'preset-card' + (isActive ? ' active' : '');
+    card.innerHTML = '<div class="pcp-name">' + p.name + '</div>' +
+      '<div class="pcp-desc">' + p.desc + '</div>' +
+      '<div class="pcp-tags">' + p.tags.map(function(t){ return '<span class="tag">' + t + '</span>'; }).join('') + '</div>' +
+      '<button class="preset-apply' + (isActive ? ' cur' : '') + '" data-id="' + p.id + '">' + (isActive ? '✓ 当前使用' : '应用此样板') + '</button>';
+    card.querySelector('.preset-apply').onclick = function(){
+      applyPreset(p.id);
+    };
+    row.appendChild(card);
+  });
+  const st = $('presetState');
+  const cur = PRESETS.find(function(p){ return p.id === activePreset; });
+  st.textContent = '当前：' + (cur ? cur.name.replace(/^[^\u4e00-\u9fa5\w]+/, '') : '✏ 自定义（已手动修改）');
+  st.className = 'chip ' + (cur ? 'c-gold' : 'c-hist');
+}
+function applyPreset(id){
+  const p = PRESETS.find(function(x){ return x.id === id; });
+  if(!p) return;
+  G.cfg = deepMerge(deepCopy(DEFAULT_CFG), p.cfg);
+  activePreset = id;
+  saveCfg();
+  applyPoolsIfClean();
+  bindCfg();
+  renderPresets();
+  renderSkills(); renderArena(); renderHud();
+  // 场景级全局默认可能随样板变化 → 第一步联动刷新
+  renderLive(); renderQueue();
+  annals('✒ 已应用配置样板：「' + p.name + '」——' + p.desc, 'hist');
+}
+
+/* =====================================================
+   配置中心
+===================================================== */
+function bindCfg(){
+  // 动态生成：技能白名单网格 + 红线集合
+  const sg = $('cfgSkillGrid');
+  sg.innerHTML = '';
+  SKILLS.forEach(function(sk){
+    const wrap = document.createElement('div');
+    wrap.className = 'cfg-row';
+    const label = POOL_OF[sk.id]==='coupon' ? '（券池）' : (POOL_OF[sk.id]==='service' ? '（服务池）' : (POOL_OF[sk.id]==='cash' ? '（现金池）' : '（零成本）'));
+    let costInput = '';
+    if(['coupon','expert','partial','full'].includes(sk.id)){
+      costInput = ' 成本¥<input type="number" style="width:70px" data-cfg="sandbox.skills.' + sk.id + '.cost">';
+    }
+    wrap.innerHTML = '<label class="cfg-check"><input type="checkbox" data-cfg="sandbox.skills.' + sk.id + '.on"> ' + sk.name + label + '</label>' + costInput;
+    sg.appendChild(wrap);
+  });
+  const rld = $('cfgRedlines');
+  rld.innerHTML = '';
+  ['人身损害','食品安全','疑似欺诈','涉未成年人','大V舆情'].forEach(function(r){
+    const l = document.createElement('label');
+    l.className = 'cfg-check';
+    l.innerHTML = '<input type="checkbox" data-redline="' + r + '"> ' + r;
+    rld.appendChild(l);
+  });
+  // 通用绑定
+  document.querySelectorAll('[data-cfg]').forEach(function(el){
+    const path = el.dataset.cfg.split('.');
+    let v = G.cfg; for(const k of path) v = v[k];
+    if(el.type === 'checkbox') el.checked = !!v; else el.value = v;
+    const handler = function(){
+      let val = el.type === 'checkbox' ? el.checked : (el.type === 'number' || el.type === 'range' ? (+el.value || 0) : el.value);
+      let o = G.cfg; for(let i=0;i<path.length-1;i++) o = o[path[i]];
+      o[path[path.length-1]] = val;
+      onCfgChanged(path.join('.'));
+    };
+    el.addEventListener('change', handler);
+    if(el.type === 'range') el.addEventListener('input', handler);
+  });
+  document.querySelectorAll('[data-redline]').forEach(function(el){
+    el.checked = G.cfg.exp.humanHandoff.redlines.includes(el.dataset.redline);
+    el.addEventListener('change', function(){
+      const r = el.dataset.redline;
+      if(el.checked){ if(!G.cfg.exp.humanHandoff.redlines.includes(r)) G.cfg.exp.humanHandoff.redlines.push(r); }
+      else { G.cfg.exp.humanHandoff.redlines = G.cfg.exp.humanHandoff.redlines.filter(function(x){ return x !== r; }); }
+    });
+  });
+  updatePersonaInfer();
+}
+function updatePersonaInfer(){
+  const el = $('personaInfer'); if(!el) return;
+  const p = G.cfg.scene.persona;
+  const c = G.cfg.scene.crm;
+  const crmHit = c.complaints >= 5 || c.creditScore < 60;
+  // 统一语义：与第一步标签同为"生效值"口径（CRM ＞ 手选 ＞ 文本推断）
+  if(crmHit){
+    el.textContent = '→ 全局生效：' + effectivePersona() + '（CRM 统计特征命中，优先于手选）';
+  } else if(p === 'auto'){
+    el.textContent = '→ 全局生效基线：' + effectivePersona() + '（无 CRM 信号 → 默认）※ 单场景运行时按消息文本进一步推断，最终生效值见第一步标签';
+  } else {
+    el.textContent = '→ 全局生效：' + p + '（手动设定，所有场景默认按此执行）｜ 单场景标签可覆写';
+  }
+}
+function onCfgChanged(path){
+  saveCfg();
+  if(path.indexOf('scene.crm') === 0 || path === 'scene.persona') updatePersonaInfer();
+  if(path === 'scene.dataSource.enabled'){
+    const st = $('dataSourceStatus');
+    if(st) st.style.display = G.cfg.scene.dataSource.enabled ? 'flex' : 'none';
+  }
+  // 场景级全局默认变更 → 第一步标签/解读/队列即时联动刷新
+  if(path.indexOf('scene.') === 0){
+    if(typeof renderLive === 'function') renderLive();
+    if(typeof renderQueue === 'function') renderQueue();
+  }
+  if(path.indexOf('sandbox.pools.') === 0) applyPoolsIfClean();
+  // 任何手动修改 → 脱离样板，进入自定义态
+  if(activePreset !== 'custom'){
+    activePreset = 'custom';
+    renderPresets();
+  }
+  renderSkills(); renderArena(); renderHud();
+}
+$('cfgBtn').onclick = function(){ $('cfgOverlay').classList.add('open'); bindCfg(); renderPresets(); };
+$('cfgClose').onclick = function(){ $('cfgOverlay').classList.remove('open'); };
+$('cfgOverlay').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('open'); });
+$('cfgReset').onclick = function(){
+  G.cfg = deepCopy(DEFAULT_CFG);
+  activePreset = 'default';
+  saveCfg();
+  applyPoolsIfClean();
+  bindCfg(); renderPresets(); resetBattleKeepChat();
+  renderLive(); renderQueue();
+  annals('✒ 配置已恢复默认（快速上手样板）', 'hist');
+};
+function resetBattleKeepChat(){
+  const keepScen = G.scenarioLabel;
+  resetBattle();
+  G.scenarioLabel = keepScen;
+}
+document.querySelectorAll('.cfg-tab').forEach(function(tab){
+  tab.onclick = function(){
+    document.querySelectorAll('.cfg-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.cfg-page').forEach(function(p){ p.classList.remove('active'); });
+    tab.classList.add('active');
+    $('cfgPage-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+/* =====================================================
+   初始化
+===================================================== */
+/* 初始状态 = 无工作数据 且 配置为默认值（配置修改也算非初始） */
+function hasWorkData(){
+  const verCount = Object.keys(G.skillVersions).reduce(function(a,k){ return a + G.skillVersions[k]; }, 0);
+  const annCount = Math.max(0, $('annalsFeed').children.length - 1);
+  return !!(G.scenarios.length || G.extraSkills.length || verCount || annCount
+      || G.sandbox.traces.length || G.round || G.sandbox.feedback);
+}
+function cfgEqualsDefault(){
+  const walk = function(a, b){
+    if(a === b) return true;
+    if(typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
+    for(const k in a){ if(!walk(a[k], b[k])) return false; }
+    for(const k in b){ if(!(k in a)) return false; }
+    return true;
+  };
+  return walk(G.cfg, DEFAULT_CFG);
+}
+function cfgDeviates(){ return !cfgEqualsDefault(); }
+/* 列出偏离默认的配置项（供弹窗消息动态点名） */
+function cfgDiffNames(){
+  const c = G.cfg, d = DEFAULT_CFG, names = [];
+  const eq = function(a,b){ return JSON.stringify(a) === JSON.stringify(b); };
+  const S = { persona:'人格', difficulty:'难度', evidenceStrict:'证据', crm:'CRM特征', dataSource:'数据源' };
+  for(const k in S){ if(!eq(c.scene[k], d.scene[k])) names.push(S[k]); }
+  if(!eq(c.sandbox.pools, d.sandbox.pools)) names.push('资金池');
+  if(!eq(c.sandbox.targets, d.sandbox.targets)) names.push('目标值');
+  if(!eq(c.sandbox.balance, d.sandbox.balance) || c.sandbox.balanceWeight !== d.sandbox.balanceWeight) names.push('权衡策略');
+  if(!eq(c.sandbox.skills, d.sandbox.skills)) names.push('技能池');
+  if(!eq(c.sandbox.spy, d.sandbox.spy)) names.push('内奸强度');
+  if(!eq(c.sandbox.depth, d.sandbox.depth)) names.push('对练深度');
+  if(c.exp.style !== d.exp.style || c.exp.pace !== d.exp.pace) names.push('话术节奏');
+  if(c.exp.dualRun !== d.exp.dualRun) names.push('双跑对校');
+  if(!eq(c.exp.humanHandoff, d.exp.humanHandoff)) names.push('转人工阈值');
+  if(!eq(c.sys, d.sys)) names.push('系统策略');
+  return names;
+}
+function isInitialState(){ return !hasWorkData() && !cfgDeviates(); }
+// 启动时恢复持久化配置（全局重置/刷新后配置保留）
+loadCfg();
+bindCfg();
+updatePersonaInfer();
+renderLive();
+
+$('resetBtn').onclick = function(){
+  const work = hasWorkData();
+  const devNames = cfgDeviates() ? cfgDiffNames() : [];
+  if(!work && !devNames.length){
+    // 初始状态：无工作数据 且 配置为默认
+    $('resetMsg').innerHTML = '当前为初始状态，没有任何可以清除的内容。';
+    $('resetClose').style.display = '';
+    $('resetCancel').style.display = 'none';
+    $('resetConfirm').style.display = 'none';
+  } else {
+    let msg;
+    if(work && devNames.length){
+      msg = '全局重置将清除<b>场景、蒸馏技能、史册、对练记录</b>等全部内容，并将已修改的配置（<b>' + devNames.join('、') + '</b>）恢复默认，然后重新加载页面（<b>不可恢复</b>）。';
+    } else if(work){
+      msg = '全局重置将清除<b>场景、蒸馏技能、史册、对练记录</b>等全部内容，并重新加载页面（<b>不可恢复</b>）。当前配置为默认值，不受影响。';
+    } else {
+      msg = '当前没有工作数据，但检测到<b>配置已修改</b>（' + devNames.join('、') + '）。全局重置将把配置<b>恢复默认</b>，并重新加载页面（<b>不可恢复</b>）。如仅需重置配置，也可进入配置中心点击「恢复默认」。';
+    }
+    $('resetMsg').innerHTML = msg;
+    $('resetClose').style.display = 'none';
+    $('resetCancel').style.display = '';
+    $('resetConfirm').style.display = '';
+  }
+  $('resetOverlay').classList.add('open');
+};
+$('resetClose').onclick = function(){ $('resetOverlay').classList.remove('open'); };
+$('resetCancel').onclick = function(){ $('resetOverlay').classList.remove('open'); };
+$('resetOverlay').addEventListener('click', function(e){ if(e.target === this) this.classList.remove('open'); });
+/* 页内完整重置兜底：环境拦截 reload 时，不依赖导航直接在当前页恢复初始状态 */
+function hardResetInPlace(){
+  const rf = document.getElementById('resetFlash');
+  if(rf) rf.remove();
+  try{ localStorage.removeItem('sgg_cfg_v1'); }catch(e){}
+  // 若沙箱回合仍在跑，先止损（运行中的循环持有旧 sandbox 引用）
+  if(G.sandbox.running && !G.sandbox.stop) G.sandbox.stop = { type:'cut', reason:'全局重置' };
+  initState();               // 全新 G：工作数据 + 配置 全部回默认
+  activePreset = 'default';  // 样板回「快速上手」
+  // UI 全量复位
+  $('annalsFeed').innerHTML = '<div class="ann-line hist">\u2712 史官就位。一切博弈，皆入史册。</div>';
+  $('chatLog').innerHTML = '';
+  $('chatInput').value = '';
+  scInput.value = '';
+  $('traceBody').innerHTML = '<div class="trace-empty">暂无记录——开始对练后，每一回合的对练原文与四角色内部决策思考过程都会在此留档</div>';
+  $('traceCount').textContent = '0 回合';
+  $('traceFold').classList.remove('open');
+  $('traceToggle').querySelector('.tw').textContent = '\u25b8 点击展开';
+  $('distillPanel').classList.remove('show');
+  $('runBtn').disabled = false;
+  $('runBtn').textContent = '\u25b6 开始对练';
+  $('scInfo').textContent = '等待开始';
+  $('fbPanel').classList.remove('open');
+  $('fbFields').classList.remove('show');
+  $('fbSubmit').disabled = false;
+  $('fbSubmit').textContent = '提交反馈 \u2192 回到沙箱再练';
+  ['fbLang','fbProgress','fbStrategy'].forEach(function(id){ const el = $(id); if(el) el.value = ''; });
+  resetBattle();
+  bindCfg(); renderPresets(); updatePersonaInfer(); renderLive(); renderQueue();
+  renderHud(); renderArena(); renderSkills();
+  switchView(1);
+  addMsg('sys', '⟳ 已在当前页面完成全局重置（本环境不支持自动刷新）：工作数据与配置均已恢复初始状态。', 'hist');
+}
+$('resetConfirm').onclick = function(){
+  if(this.disabled) return;
+  this.disabled = true;
+  // ① 弹框立即关闭
+  $('resetOverlay').classList.remove('open');
+  // ② 全屏重置提示：让"正在执行重置"可见（而非无声刷新）
+  const rb = document.createElement('div');
+  rb.id = 'resetFlash';
+  rb.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(6,8,16,.93);display:flex;align-items:center;justify-content:center;font-family:var(--px-font),monospace;font-size:18px;color:#ffd76e;text-shadow:2px 2px 0 #0a0d18;letter-spacing:2px;';
+  rb.textContent = '\u27f3 正在执行全局重置\u2026';
+  document.body.appendChild(rb);
+  // ③ 清除持久化配置（工作数据随刷新丢失）
+  try{ localStorage.removeItem('sgg_cfg_v1'); }catch(e){}
+  // ④ 重新加载页面；若 2 秒后页面仍在（环境拦截了 reload）→ 页内完整重置兜底，绝不拼接 URL 导航
+  setTimeout(function(){
+    let reloaded = false;
+    try{ location.reload(); reloaded = true; }catch(e){}
+    if(!reloaded){ hardResetInPlace(); return; }
+    setTimeout(function(){ hardResetInPlace(); }, 2000);
+  }, 450);
+};
+renderQueue(); renderHud(); renderArena(); renderSkills();
+say('【系统】', 'n-sys', '欢迎来到三国杀·赔付谈判技能工厂。第一步：灌入你的疑难赔付场景——反贼正等着剧本开演。');
+if(document.fonts && document.fonts.load) document.fonts.load('12px Zpix').catch(function(){});
+// #demo 锚点：自动灌入示例场景并开始对练（演示/测试用）
+// #demo2：进一步自动完成 加载技能→发送匹配消息→提交反馈→新一轮对练 的完整闭环
+if(location.hash === '#trace'){
+  // 演示锚点：灌入场景 + 对练完成后自动展开「对练全记录」
+  scInput.value = '我是连锁餐饮采购，你们批次质量问题害我停业2天，损失起码4万，必须赔！\n我已经向12315提交投诉，再不解决就升级到市场监督管理局！';
+  $('scAddBtn').click();
+  setTimeout(function(){ $('toStep2Btn').click(); }, 800);
+  const w = setInterval(function(){
+    if(G.sandbox.stop && !G.sandbox.running){
+      clearInterval(w);
+      $('traceFold').classList.add('open');
+      $('traceToggle').querySelector('.tw').textContent = '▾ 点击收起';
+      const b = $('traceBody'); b.scrollTop = 0;
+    }
+  }, 500);
+}
+if(location.hash === '#demo3'){
+  // 演示锚点：灌入→对练→加载技能→停在第三步（展开结构化反馈面板）
+  scInput.value = '我是连锁餐饮采购，你们批次质量问题害我停业2天，损失起码4万，必须赔！\n我已经向12315提交投诉，再不解决就升级到市场监督管理局！';
+  $('scAddBtn').click();
+  setTimeout(function(){ $('toStep2Btn').click(); }, 800);
+  const w3 = setInterval(function(){
+    if(G.sandbox.stop && !G.sandbox.running && G.sandbox.lastSkill){
+      clearInterval(w3);
+      $('loadSkillBtn').click();
+      setTimeout(function(){
+        $('fbPanel').classList.add('open');
+        $('fbToggle').querySelector('.tw').textContent = '▾ 收起';
+      }, 800);
+    }
+  }, 500);
+}
+if(location.hash === '#demo' || location.hash === '#demo2'){
+  scInput.value = '我是连锁餐饮采购，你们批次质量问题害我停业2天，损失起码4万，必须赔！\n我已经向12315提交投诉，再不解决就升级到市场监督管理局！';
+  $('scAddBtn').click();
+  scInput.value = '用了你们的面霜全脸红肿，医院诊断接触性皮炎！医药费单据都传了！\n医药费全报加三倍赔偿，不然发小红书挂你们！';
+  $('scAddBtn').click();
+  setTimeout(function(){ $('toStep2Btn').click(); }, 800);
+}
+if(location.hash === '#demo2'){
+  const waitStop = setInterval(function(){
+    if(G.sandbox.stop && !G.sandbox.running && G.sandbox.lastSkill){
+      clearInterval(waitStop);
+      $('loadSkillBtn').click();
+      setTimeout(function(){ sendMessage('不解决我就发小红书挂你们，让全网看看你们怎么对待客户！'); }, 1500);
+      setTimeout(function(){
+        if(!G.busy){
+          $('fbPanel').classList.add('open');
+          $('fbBad').click();
+          $('fbStrategy').value = '现金比券更能安抚，这类场景应该更果断给部分赔付';
+          $('fbProgress').value = '来回轮次太多，第二回合就该给实质方案；用户已经说可以达成一致了，就别再重复询问是否满意了';
+          $('fbLang').value = '共情表达可以更自然';
+          $('fbSubmit').click();
+        }
+      }, 14000);
+    }
+  }, 500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国杀 · 赔付谈判技能工厂 — 产品特性说明书 v2.3</title>
+<style>
+@font-face{font-family:'Zpix';src:url('./Zpix.woff2') format('woff2');font-display:swap;}
+:root{--bg:#101321;--panel:#1a2033;--panel2:#141928;--panel3:#0f1320;--line:#3a4468;--ink:#eaeffb;--dim:#8b95b8;--faint:#5c6588;
+--loyal:#4f8cff;--rebel:#ff5c8a;--spy:#ff9a3d;--hist:#46c8b0;--gold:#ffd76e;--green:#4ade80;--red:#ff5c5c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 1px,transparent 1px 4px);color:var(--ink);
+font-family:'Zpix','Courier New',monospace;font-size:14px;line-height:1.8;padding:24px;}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:23px;color:var(--gold);letter-spacing:2px;text-shadow:2px 2px 0 #0009;}
+h1 span{color:var(--ink);}
+.sub{color:var(--dim);font-size:13px;margin:6px 0 20px;}
+h2{font-size:18px;color:var(--gold);margin:0 0 12px;padding:8px 12px;background:#232b45;border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line);letter-spacing:1px;}
+h2 .no{color:var(--rebel);margin-right:8px;}
+h2.hist2{background:#122d28;box-shadow:inset 0 0 0 2px var(--hist);color:var(--hist);}
+h3{font-size:15px;margin:16px 0 8px;}
+section{margin-bottom:26px;}
+.panel{background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line),0 4px 0 rgba(0,0,0,.3);padding:16px 18px;}
+p{margin:8px 0;}
+p.dim,.dim{color:var(--dim);}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;}
+th{background:#232b45;border:2px solid #0a0d18;padding:7px 9px;color:var(--gold);text-align:left;}
+td{border:2px solid #0a0d18;padding:7px 9px;background:var(--panel2);vertical-align:top;}
+tr:hover td{background:#1c2440;}
+code{background:#0d1226;border:1px solid var(--line);padding:1px 6px;color:#9fe8a8;font-size:12px;}
+pre{background:#0d1226;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;font-size:12px;line-height:1.9;overflow-x:auto;color:#c9d6f2;margin:10px 0;}
+.tag{display:inline-block;padding:0 8px;font-size:11px;border:2px solid #0a0d18;margin:1px 2px;}
+.tag.loyal{background:#20304d;color:var(--loyal);} .tag.rebel{background:#42222f;color:var(--rebel);}
+.tag.spy{background:#3d2a12;color:var(--spy);} .tag.gold{background:#3a3010;color:var(--gold);}
+.tag.hist{background:#0f2a24;color:var(--hist);} .tag.red{background:#42201a;color:#ff8a8a;} .tag.green{background:#1d3a2a;color:var(--green);}
+blockquote{border-left:4px solid var(--hist);background:#0f1d1a;padding:8px 14px;margin:10px 0;color:#a8e8dc;}
+blockquote.gold{border-left-color:var(--gold);background:#231d0e;color:#f0d896;}
+ul,ol{margin:8px 0 8px 22px;}
+li{margin:4px 0;}
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;font-size:12.5px;}
+.toc a{color:var(--dim);text-decoration:none;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px #262e4a;padding:4px 10px;display:block;}
+.toc a:hover{color:var(--gold);}
+.flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin:10px 0;}
+.flow .fstep{flex:1;min-width:180px;background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:10px 12px;font-size:12px;}
+.flow .fstep b{display:block;color:var(--gold);font-size:13px;margin-bottom:4px;}
+.flow .farrow{align-self:center;color:var(--faint);font-size:18px;}
+.small{font-size:11.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>三国杀 · 赔付谈判技能工厂 <span>— 产品特性说明书 v2.3</span></h1>
+<div class="sub">v2 核心变化：从「可视化对话产品」升级为「技能沉淀工厂 + 三步体验闭环」，新增第四角色【仲裁史官】<br>v2.1 新增：第二步「对练全记录」折叠面板（对练原文 + 四角色内部决策思考全程留档）<br>v2.2 新增：第三步反馈升级为结构化三方面（语言交互/进展推进/策略决定，字数不限，分路回灌）
+<br>v2.3 新增：<b>共识达成检测与成交收尾机制</b>（修复"用户同意后仍重复报价"问题）+ 收尾能力反馈路由<br>配套交付：index.html（三步向导应用）· 对话测试用例库-100例.html（引擎 v2 兼容）· 本说明书</div>
+
+<div class="panel" style="margin-bottom:22px">
+<b style="color:var(--gold)">目录</b>
+<div class="toc" style="margin-top:8px">
+<a href="#s0">〇、v1 → v2 变更总览</a>
+<a href="#s1">一、产品定位：技能工厂与三步闭环</a>
+<a href="#s2">二、四角色架构（新增仲裁史官）</a>
+<a href="#s3">三、三步用户流程详解</a>
+<a href="#s4">四、技能蒸馏规格（核心输出物）</a>
+<a href="#s5">五、沙箱对练引擎（承袭 v1 + 更新）</a>
+<a href="#s6">六、校准点更新（v2）</a>
+<a href="#s7">七、预告：第一步灌入时的可配置参数（下轮讨论）</a>
+</div>
+</div>
+
+<!-- ================= 〇 ================= -->
+<section id="s0">
+<h2><span class="no">〇</span>v1 → v2 变更总览</h2>
+<div class="panel">
+<table>
+<tr><th style="width:26%">维度</th><th style="width:37%">v1（对练沙盒）</th><th>v2（技能工厂）</th></tr>
+<tr><td><b>产品定位</b></td><td>C 端对话 + 三方博弈可视化呈现</td><td><b>独立运作的沙箱工厂</b>：博弈的输出物 = 可加载的赔付谈判技能；C 端体验是技能的检验场</td></tr>
+<tr><td><b>角色数量</b></td><td>3（忠臣/反贼/内奸）</td><td><b>4</b>：新增<span class="tag hist">仲裁史官</span>（记录沉淀 + 仲裁死局 + 用户交互）</td></tr>
+<tr><td><b>用户流程</b></td><td>单页：直接聊天</td><td><b>三步向导</b>：① 灌入场景 → ② 沙箱对练蒸馏 → ③ 加载技能体验 → 反馈回流（闭环）</td></tr>
+<tr><td><b>输出物</b></td><td>一场对话的博弈过程</td><td><b>带命名/版本/描述/招式路径的技能卡</b>，可迭代（v1→v2→v3…），可真实加载生效</td></tr>
+<tr><td><b>内奸机制</b></td><td>升压 + 工具降级/冻结</td><td>新增<span class="tag spy">Mode B · 方案替换</span>：现金→券置换（用户更喜欢现金，业务需要省成本）</td></tr>
+<tr><td><b>死局处理</b></td><td>无（可能无限循环）</td><td>史官仲裁：回合上限/停滞/预算见底/攻势顶格 → 终止并择优蒸馏</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ================= 一 ================= -->
+<section id="s1">
+<h2><span class="no">壹</span>产品定位：技能工厂与三步闭环</h2>
+<div class="panel">
+<p><b>定位宣言</b>：沙箱可以<b>独立运作</b>——四角色互相博弈，输出物是「能很好应对某一类赔付情况的谈判技能或经验」。C 端用户在对话里体验的，是加载了这些新技能的谈判专家；右侧同步可视化系统内部博弈。</p>
+<div class="flow">
+<div class="fstep"><b>① 灌入疑难场景</b>对话原文或场景描述，成为反贼的剧本原料；引擎实时解读攻势类型/等级/证据强度</div>
+<div class="farrow">▸</div>
+<div class="fstep"><b>② 沙箱四角色对练</b>反贼按剧本发难 → 忠臣用现有技能应对 → 内奸放大原始诉求难度/现金换券/降额度 → 史官记录+仲裁</div>
+<div class="farrow">▸</div>
+<div class="fstep"><b>③ 加载技能·体验</b>蒸馏技能入忠臣技能库（匹配场景优先），附用例剧本；右侧可视化内部博弈</div>
+<div class="farrow">↩</div>
+<div class="fstep"><b>反馈回流（闭环）</b>用户体验后评价（有效/需改进+建议）→ 史官把反馈与对话原文回灌沙箱 → 新一轮对练 → 技能版本迭代</div>
+</div>
+<blockquote><b>与设想的对应关系</b>：你提出的「第一步灌入 → 第二步博弈 → 第三步体验+反馈 → 回到第二步」完整落地为可操作的闭环界面。技能是产品最重要的输出；对话体验是技能的检验场与反馈源。</blockquote>
+</div>
+</section>
+
+<!-- ================= 二 ================= -->
+<section id="s2">
+<h2 class="hist2">贰 · 四角色架构</h2>
+<div class="panel">
+<table>
+<tr><th style="width:14%">角色</th><th style="width:20%">视觉与定位</th><th style="width:36%">职能</th><th>关键机制</th></tr>
+<tr><td><span class="tag rebel">反贼</span></td><td>粉红持刀暴徒 · 左前锋</td><td>情景（用户）模拟器：基于第一步灌入的场景和对话原文模拟用户发问，持续制造难度</td><td>5 类攻势 × 3 级；剧本轮（灌入原文）+ 升级轮（同型自动 +1 级）；记忆机制</td></tr>
+<tr><td><span class="tag loyal">忠臣</span></td><td>蓝甲金盾骑士 · 右前锋</td><td>金牌 Skill 引擎：基于当前已有技能（含已加载蒸馏技能）寻求达成一致</td><td>6+1 决策树（拒绝/全额/伤害下限/覆盖贪心/换招）；蒸馏技能类型匹配优先</td></tr>
+<tr><td><span class="tag spy">内奸</span></td><td>橙兜帽摇扇者 · 后排右</td><td>均衡破坏者：观察全程当搅屎棍，通过放大原始诉求难度、减少赔付额度、<b>替换赔付方案</b>更新博弈难度</td><td>Mode A 原始诉求放大（攻势+16~25）；Mode B 三变体：<b>方案替换（现金→券，40% 概率针对部分赔付）</b>、工具降级（成本×1.5）、工具冻结（2 轮）；干预预算 3 次（反馈"需改进"时 +1）</td></tr>
+<tr><td><span class="tag hist">仲裁史官</span></td><td>青绿官帽执卷史官 · 后排左<br><b>与三国杀三角色平行的新主体</b></td><td><b>职能一（最重要）：沉淀赔付谈判技能与经验</b>——记录全程、择最优对局片段、蒸馏技能（命名/版本/描述/招式路径）<br><b>职能二：仲裁</b>——避免博弈陷入无限循环或死局<br><b>职能三：用户交互</b>——告知技能产出、请用户确认加载体验、记录反馈回灌沙箱</td><td>史册实时记录（每回合：攻防过程+效率研判★★★）；仲裁四条件；技能蒸馏器；版本管理（v1→vN，反馈驱动迭代）；用户反馈处理（bad → 反贼加压+内奸预算+1；good → 巩固）</td></tr>
+</table>
+<h3>仲裁史官的仲裁规则（每回合判定，择一触发）</h3>
+<table>
+<tr><th>条件</th><th>判定</th><th>动作</th></tr>
+<tr><td>均衡收敛（Pareto 达成）</td><td><span class="tag green">仲裁通过</span></td><td>正常收官，蒸馏技能</td></tr>
+<tr><td>剧本全部走完</td><td><span class="tag green">仲裁通过</span></td><td>谈判路径完整，蒸馏技能</td></tr>
+<tr><td>回合 ≥ 12</td><td><span class="tag red">仲裁终止</span></td><td>防无限循环，择最优片段蒸馏</td></tr>
+<tr><td>攻势 ≥95 且解决率 &lt;50</td><td><span class="tag red">仲裁终止</span></td><td>死局风险，止损蒸馏</td></tr>
+<tr><td>预算见底（&lt;¥60）且无净进展</td><td><span class="tag red">仲裁终止</span></td><td>成本耗尽，止损蒸馏</td></tr>
+<tr><td>连续 4 轮净变化 &lt;2</td><td><span class="tag red">仲裁终止</span></td><td>停滞保护，止损蒸馏</td></tr>
+</table>
+<p class="dim small">※ 史官不参与博弈、不站队——它是"用最合适的博弈过程输出最优质谈判技能"的裁判与档案官。视觉上：待命时静坐执笔（角色微暗），每回合头顶浮「录/记」字样并落下墨点粒子，仲裁与蒸馏时上前一步、卷轴金光绽放。</p>
+</div>
+</section>
+
+<!-- ================= 三 ================= -->
+<section id="s3">
+<h2><span class="no">叁</span>三步用户流程详解</h2>
+<div class="panel">
+<h3>第一步 · 疑难杂症灌入</h3>
+<ul>
+<li>输入形态：<b>多轮对话原文</b>（一行一轮，按句/行切分为剧本轮）或<b>场景描述</b></li>
+<li><b>引擎实时解读</b>（打字即反馈）：攻势类型/等级/预计增益、证据强度（强→可解锁全额与伤害下限；弱→高要价将触发合规拒绝）、人身损害标记、预计剧本轮数</li>
+<li>快捷模板 4 种（B2B 停业+监管 / 人身损害+舆情 / 疑似欺诈空包裹 / 经销商批量索赔）</li>
+<li>场景队列：可增删、可混合来源（手动灌入 + 反馈回灌），进入第二步按顺序对练</li>
+</ul>
+<h3>第二步 · 沙箱四角色对练</h3>
+<ul>
+<li>剧本构造：每场景 ≤3 原文轮 + 2 升级轮（按类型自动生成，如舆情型→"视频已剪好就差标题/今晚八点上热搜"），总量截断 12 轮</li>
+<li><b style="color:var(--hist)">📂 对练全记录（v2.1 新增，折叠面板）</b>：对练区下方折叠入口，展开后逐回合留档——<b>📜 对练原文</b>（反贼台词 + 忠臣谈判应答全文）+ 四角色<b>内部决策思考过程</b>：
+  <ul>
+  <li><span class="tag rebel">反贼思考</span>：剧本来源、关键词命中明细（如「12315、投诉」→合规威胁+3）、金额/情绪/长度信号、等级与增益公式、记忆库状态（同型出现次数与升级判定）</li>
+  <li><span class="tag loyal">忠臣思考</span>：证据档案粘滞判定（翻案/降级/维持）、决策树逐级推演（①反欺诈线→②法律线→③蒸馏技能匹配/伤害下限→④可用池→⑤覆盖贪心→⑥换招规避）、预算校验</li>
+  <li><span class="tag spy">内奸思考</span>：三触发线评估（均衡≥55/解决率≥88/单轮成本≥¥1200）、模式选择理由、目标锁定逻辑（优先最近使用的高价工具）、现金→券置换判定</li>
+  <li><span class="tag hist">史官研判</span>：效率量化（化解÷成本）、解决率/均衡/攻势走势、仲裁检查（死局/停滞/预算信号）</li>
+  </ul></li>
+<li>反馈驱动调整：「需改进」反馈会追加一轮「上次的方案我不接受！直接升级处理！」且内奸干预预算 3→4</li>
+<li>界面：左侧大竞技场 + RPG 对话框；右侧史册面板（记录 feed + 效率研判 + 进度）与控制条</li>
+<li>速度：沙箱模式 0.55× 倍速（打字机 13ms/字），完整一轮约 40-60 秒</li>
+</ul>
+<h3>第三步 · 加载技能 · 体验谈判</h3>
+<ul>
+<li>点击「📦 加载技能」：技能卡进入忠臣技能库（金框 + v 版本徽章，最多同时 4 个）</li>
+<li><b>技能真实生效</b>：聊天消息的攻势类型与技能 matchType 匹配时，忠臣优先使用该技能（弹道金色、应答话术引用技能路径）</li>
+<li><b>技能用例剧本</b>：史官依据灌入场景自动生成 3 条示例消息，一键发送体验</li>
+<li>右侧 = 内部博弈可视化（与 v1 相同：你的每条消息 = 一回合三方博弈 + 史官记录）</li>
+<li><b>反馈闭环（v2.2 结构化，门控式交互）</b>：折叠面板内第一级为总评——<b>点 👍（技能有效）直接提交总评，无表单</b>；<b>点 👎（需要改进）才展开第二级：三方面结构化反馈表单</b>（字数不限，均可留空，分路回灌）：
+  <ul>
+  <li><b>💬 语言交互方面</b>（话术/语气/共情表达）→ <span class="tag hist">回灌史官</span>：登记为蒸馏技能的话术层注记（供话术库迭代）</li>
+  <li><b>📈 进展推进方面</b>（节奏/轮次/方案速度）→ <span class="tag rebel">回灌反贼</span>：下一轮自动注入节奏施压回合（如"我不想再耗了，今天必须直接进入实质方案"——由"慢/拖/久/来回"等关键词触发）</li>
+  <li><b>♟ 策略决定方面</b>（赔付工具/金额/方案选择）→ <span class="tag rebel">回灌反贼+忠臣</span>：下一轮自动注入策略挑战回合（如"别再拿优惠券糊弄我，我只接受现金赔偿"——由"现金/券"等关键词触发）</li>
+  <li><b>✦ 收尾能力（v2.3，跨方面检测）</b>→ <span class="tag gold">回灌沙箱</span>：三方面反馈中含"重复/满意/询问/达成/一致/成交/收尾/结束/确认"等词 → 下一轮剧本末尾追加<b>成交确认测试回合</b>（"行吧，那就按这个方案办！"），验证忠臣能否正确停止报价并收尾</li>
+  </ul>
+  提交后三方面反馈 + 对话原文回灌第一步场景队列 → 自动新一轮对练 → 蒸馏 v+1 技能（版本注记完整记录三方面原文）。<br><span class="dim small">※ 交互门控：👍=总评直提（巩固路径），👎=展开三方面表单（改进路径），二者互斥切换；若在谈判回合进行中提交反馈，系统会显示「⏳ 等待当前回合结束，即将自动开练」并自动排队启动（防静默丢失）；提交按钮在排队期间禁用防重复提交</span></li>
+</ul>
+<blockquote class="gold"><b>演示模式</b>：URL 加 <code>#demo</code> 自动灌入 2 条场景并跑完整对练；<code>#demo2</code> 额外自动完成 加载技能→发送匹配消息→提交反馈→再对练 的完整闭环（内部测试用）。</blockquote>
+</div>
+</section>
+
+<!-- ================= 四 ================= -->
+<section id="s4">
+<h2><span class="no">肆</span>技能蒸馏规格（核心输出物）</h2>
+<div class="panel">
+<h3>4.1 命名规则</h3>
+<pre>[场景词]·[策略名] v[版本]
+场景词：舆情 / 合规 / 涉法 / 高额 / 常规（取对练中最高频攻势类型）
+策略名：守线举证法 / 共情安抚法 / 权益置换法 / 专家背书法 / 阶梯赔付法 / 一次到位法（取主导技能）
+示例：舆情·阶梯赔付法 v2</pre>
+<h3>4.2 技能卡字段</h3>
+<table>
+<tr><th>字段</th><th>来源</th></tr>
+<tr><td>名称 + 版本</td><td>命名规则；同一技能名跨轮次版本自增（反馈驱动迭代）</td></tr>
+<tr><td>针对场景</td><td>对练中主导攻势类型（matchType，加载后类型匹配优先）</td></tr>
+<tr><td>核心招式路径</td><td>全轮次去重保序的技能序列，如「专家通道建立信任 → 按举证 60% 阶梯赔付」</td></tr>
+<tr><td>使用成本 / 力度</td><td>成本 = 每轮均摊成本（¥0~1,600）；力度 = 30+终局解决率/5（P30~46）；<b>迭代版力度递增</b>（主导技能为已加载技能时 +2+解决率/12，上限 P48）</td></tr>
+<tr><td>验证数据</td><td>验证回合数 / 总成本 / 终局解决率 / 内奸干预次数（含现金换券压力测试）</td></tr>
+<tr><td>版本变更注记</td><td>v2+ 附「吸纳用户反馈（需改进/确认有效+建议原文）」</td></tr>
+<tr><td>用例剧本</td><td>灌入场景首句自动生成 ≤3 条</td></tr>
+</table>
+<h3>4.3 版本迭代规则（反馈闭环）</h3>
+<pre>👍 技能有效 → 新一轮侧重巩固 → 同名技能 v+1（力度小增，注记"打法予以巩固"）
+👎 需要改进 → 反贼追加"直接升级"轮 + 内奸预算+1 → 复测通过后 v+1（注记"反贼加压复测通过"）
+主导技能 = 已加载技能 → 技能血统延续：同名迭代增强（力度 +2+解决率/12），而非另起新名</pre>
+<h3>4.4 加载与生效</h3>
+<ul>
+<li>加载后进入忠臣技能库（与基础 6 式并列，金框标识）；场景类型匹配 → <b>优先使用</b>（体验路径：弹道金色、对白「这题我练过！」、应答引用技能打法）</li>
+<li>内奸同样可以对蒸馏技能降级/冻结（它也是"工具"）——沙箱中被打磨过的技能才是可交付的</li>
+<li>同时最多加载 4 个技能（超出时淘汰最旧）</li>
+</ul>
+</div>
+</section>
+
+<!-- ================= 五 ================= -->
+<section id="s5">
+<h2><span class="no">伍</span>沙箱对练引擎（承袭 v1 + v2 更新）</h2>
+<div class="panel">
+<p class="dim">v1 说明书的反贼策略集（5 类攻势/等级/记忆）、忠臣决策树（6+1 技能/证据粘滞/伤害下限/合规拒绝）、内奸触发矩阵、收敛公式在 v2 中全部保留，此处仅列增量。100 例用例库的引擎推演结果仍有效。</p>
+<h3>增量一览</h3>
+<table>
+<tr><th>模块</th><th>v2 更新</th></tr>
+<tr><td>内奸 Mode B</td><td>新增<b>方案替换</b>变体（40% 概率针对〔部分赔付〕）：停用 1 轮并宣告「用户更喜欢现金，但业务需要省成本——用券把这场谈下来」，逼忠臣用低成本手段达成同等化解</td></tr>
+<tr><td>内奸预算</td><td>每场 3 次（v1 即有）；反馈「需改进」后新一轮为 4 次</td></tr>
+<tr><td>来源扩展</td><td>回合来源 chat / sandbox 双通道；沙箱回合由灌入剧本驱动（原文轮+升级轮），反贼对白标注「（灌入剧本）」</td></tr>
+<tr><td>史官记录</td><td>每回合写入史册：R# 攻防链 + 效率研判（★★★ = rg/(cost+100)≥0.12）+ 解决率；终局写仲裁判定与技能沉淀记录</td></tr>
+<tr><td>收敛展示</td><td>沙箱中收敛由史官接管（仲裁通过路径）；C 端聊天中仍直接展示 Pareto 收敛横幅</td></tr>
+<tr><td>状态管理</td><td>进入第三步自动重置战斗状态（预算/解决率/均衡），蒸馏技能与场景队列持久保留</td></tr>
+<tr><td><b>共识达成检测（v2.3）</b></td><td>用户消息命中成交检测（≤24 字短句 + 确认词开头/结尾 + 无否定/转折）且已有报价在先 → 触发<b>成交收尾回合</b>而非新一轮报价：攻势归零、启用新技能〔确认成交·收尾〕（复述最终条款 + 停止报价 + 进入执行）、内奸不搅局、金色成交横幅、解决率 +12；成交后再确认 → 礼貌告知已成交；成交后新诉求 → 开新一轮正常回合。<b>沙箱中成交测试回合同样走此路径</b>，蒸馏技能路径纳入"确认成交收尾（复述条款·停止报价）"</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ================= 六 ================= -->
+<section id="s6">
+<h2><span class="no">陆</span>校准点更新（v2 新增，v1 的 12 条仍有效）</h2>
+<div class="panel">
+<table>
+<tr><th style="width:30px">#</th><th>校准点</th><th>当前实现 / 待确认</th></tr>
+<tr><td>◆13</td><td><b>技能的最重要输出地位</b></td><td>已按设想调整：沙箱独立运作、技能蒸馏为产品核心输出、C 端对话是检验场。蒸馏技能目前为规则统计产物（主导技能+路径+数据），<b>未接入 LLM 生成话术级 Skill</b>——话术深度是否需要 LLM 增强？</td></tr>
+<tr><td>◆14</td><td><b>仲裁史官的"最优对局片段"</b></td><td>当前最优片段 = 单回合净收益（rg×0.95−gain×0.22）最大者，仅作标注未深度利用。设想中"用最合适的博弈过程输出最优质技能"是否需要更复杂的片段选择（如连续稳定段/低成本段）？</td></tr>
+<tr><td>◆15</td><td><b>内奸"现金换券"</b></td><td>实现为 40% 概率针对部分赔付的停用 1 轮。用户原话"替换赔付方案（现金换优惠券）"是否需要更完整的置换族（全赔→部分、部分→券+专家通道等组合置换）？</td></tr>
+<tr><td>◆16</td><td><b>技能命名规则</b></td><td>当前为 [场景词]·[策略名] v[N] 自动生成。业务侧是否有既有 Skill 命名规范需要遵循？</td></tr>
+<tr><td>◆17</td><td><b>反馈回灌策略（v2.2 已部分实现）</b></td><td>三方面分路回灌：语言→史官话术注记；进展→反贼节奏施压回合（关键词触发）；策略→反贼策略挑战回合（关键词触发）。当前路由为关键词级（"现金/券/慢/拖"等），<b>语义级路由需 LLM</b>（如策略反馈"比例应更高"→ 忠臣下一轮 partial 覆盖阈值下调）。关键词路由规则表是否需要业务侧共建？</td></tr>
+<tr><td>◆18</td><td><b>技能库容量</b></td><td>同时加载 4 个、按 key 去重。技能库是否需要持久化（localStorage/后端）与跨会话管理界面？</td></tr>
+<tr><td>◆19</td><td><b>闭环最小验证</b></td><td>#demo2 自动化验证通过：灌入→对练→蒸馏 v1→加载→匹配消息体验→bad 反馈→回灌→再对练→蒸馏 v2。人工体验节奏（每轮 40-60 秒）是否可接受，还是需要 2× 加速档？</td></tr>
+<tr><td>◆20</td><td><b>多场景混合对练</b></td><td>多场景顺序串行对练（各 5 轮）后统一蒸馏。是否需要按场景分别蒸馏（一场景一技能）？当前为合并统计</td></tr>
+<tr><td>◆22</td><td><b>成交检测的语义边界（v2.3）</b></td><td>当前为正则规则（短句+确认词+排除否定/转折，"可以是可以，但金额要再谈"已正确排除）。语义级确认（"先这样吧回头再说"、"算是可以了"等模糊表态）需 LLM 意图分类。收尾回复的条款复述对蒸馏技能使用其招式路径——是否需要更细的成交条款模板（金额/时限占位符）？</td></tr>
+<tr><td>◆21</td><td><b>内部思考的深度（v2.1）</b></td><td>「对练全记录」目前是规则引擎的可解释决策日志（每一步有明确规则依据）。接入 LLM 后是否升级为真正的思维链（含话术斟酌、用户心理推测等不可规则化内容）？规则日志保底可解释性，LLM 思维链补充拟人性——建议双层并存</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ================= 七 ================= -->
+<section id="s7">
+<h2 class="hist2">柒 · 预告：第一步灌入时的可配置参数（下轮讨论）</h2>
+<div class="panel">
+<p class="dim">按你的要求提前思考。当前第一步仅有「场景文本」一个自由度，其余全部使用默认值。以下是可开放给用户配置的参数清单（按优先级排序），下轮讨论确定哪些进入 v3：</p>
+<table>
+<tr><th style="width:26%">参数</th><th style="width:14%">类型</th><th style="width:30%">作用对象</th><th>设计考量</th></tr>
+<tr><td><b>① 场景难度基线</b></td><td>Lv.1-3</td><td>反贼初始等级</td><td>默认自动识别；手动可强制高压（如已知是职业索赔人）</td></tr>
+<tr><td><b>② 用户人格画像</b></td><td>理性协商 / 情绪主导 / 专业索赔 / 职业敲诈</td><td>反贼出题语气与升级曲线</td><td>影响升级话术模板选择与记忆升级速度；敲诈画像默认走风控线</td></tr>
+<tr><td><b>③ 预算上限 + 工具白名单</b></td><td>¥ 金额 + 工具勾选</td><td>忠臣可用技能池</td><td>如「本轮只允许券和专家通道，禁现金赔付」——直接改变 Pareto 前沿形状</td></tr>
+<tr><td><b>④ 成本-效果权重</b></td><td>省钱优先 ↔ 解决率优先滑杆</td><td>内奸 Mode 选择 + 史官最优片段判定</td><td>省钱端→内奸更频繁 Mode B、史官偏好低成本片段；解决率端→反之</td></tr>
+<tr><td><b>⑤ 内奸强度</b></td><td>干预预算 0-6 / 模式偏好</td><td>内奸</td><td>0=不搅局（纯验证）；6=地狱难度；可锁「只加压」或「只降本」</td></tr>
+<tr><td><b>⑥ 对练深度</b></td><td>回合上限 / 收敛阈值</td><td>史官仲裁</td><td>快速验证（6 轮）↔ 深度打磨（20 轮）</td></tr>
+<tr><td><b>⑦ 红线策略</b></td><td>沙盒推演 / 强制转人工</td><td>人身损害/食安/欺诈类</td><td>沙盒模式允许推演产出参考；线上模式强制人工+法务</td></tr>
+<tr><td><b>⑧ 证据严格度</b></td><td>宽松 / 标准 / 严格</td><td>忠臣证据判定</td><td>严格档=所有 strong 需上传凭证核验后才生效（风控接口前置）</td></tr>
+<tr><td><b>⑨ 历史数据源</b></td><td>渠道/品类/时间窗选择</td><td>反贼原料库</td><td>接业务系统历史工单后：选「近 90 天食品类差评工单」作为剧本原料，替代/补充手动灌入</td></tr>
+<tr><td><b>⑩ 多场景权重</b></td><td>优先级/占比</td><td>剧本轮分配</td><td>重点场景多分配升级轮；次要场景只走原文轮</td></tr>
+<tr><td><b>⑪ 升级话术库</b></td><td>自定义模板</td><td>反贼升级轮</td><td>企业用自己的真实 escalation 话术替代默认模板（更贴近业务）</td></tr>
+<tr><td><b>⑫ 输出物形式</b></td><td>技能卡 / 话术剧本 / 检查清单</td><td>史官蒸馏器</td><td>除技能卡外，是否要输出「谈判剧本」（逐句应答）或「SOP 检查清单」形态</td></tr>
+</table>
+<blockquote class="gold"><b>我的预判</b>：①②③④ 是第一优先级（直接决定博弈形态与产出方向）；⑨ 是拉开与竞品差距的关键（真实历史数据=反贼的弹药库）；⑫ 决定输出物是否贴合一线使用习惯。建议下轮从这五个切入。</blockquote>
+</div>
+</section>
+
+<p class="dim small" style="text-align:center;padding:10px 0 20px">三国杀 · 赔付谈判技能工厂 v2.0 ｜ 配套：index.html（三步向导）· 对话测试用例库-100例.html ｜ 用于产品思路校准，非业务/法律承诺</p>
+</div>
+</body>
+</html>

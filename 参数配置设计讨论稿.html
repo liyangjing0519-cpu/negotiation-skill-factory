@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国杀 · 技能工厂 — 参数配置设计讨论稿 v1</title>
+<style>
+@font-face{font-family:'Zpix';src:url('./Zpix.woff2') format('woff2');font-display:swap;}
+:root{--bg:#101321;--panel:#1a2033;--panel2:#141928;--panel3:#0f1320;--line:#3a4468;--ink:#eaeffb;--dim:#8b95b8;--faint:#5c6588;
+--loyal:#4f8cff;--rebel:#ff5c8a;--spy:#ff9a3d;--hist:#46c8b0;--gold:#ffd76e;--green:#4ade80;--red:#ff5c5c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 1px,transparent 1px 4px);color:var(--ink);
+font-family:'Zpix','Courier New',monospace;font-size:14px;line-height:1.8;padding:24px;}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:22px;color:var(--gold);letter-spacing:2px;text-shadow:2px 2px 0 #0009;}
+h1 span{color:var(--ink);}
+.sub{color:var(--dim);font-size:13px;margin:6px 0 20px;}
+h2{font-size:18px;color:var(--gold);margin:26px 0 12px;padding:8px 12px;background:#232b45;border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line);letter-spacing:1px;}
+h2 .no{color:var(--rebel);margin-right:8px;}
+h2.yours{background:#3a1a28;box-shadow:inset 0 0 0 2px var(--rebel);}
+h2.yours .no{color:var(--gold);}
+h3{font-size:15px;margin:16px 0 8px;}
+section{margin-bottom:10px;}
+.panel{background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line),0 4px 0 rgba(0,0,0,.3);padding:16px 18px;}
+p{margin:8px 0;} p.dim,.dim{color:var(--dim);}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;}
+th{background:#232b45;border:2px solid #0a0d18;padding:7px 9px;color:var(--gold);text-align:left;}
+td{border:2px solid #0a0d18;padding:7px 9px;background:var(--panel2);vertical-align:top;}
+tr:hover td{background:#1c2440;}
+pre{background:#0d1226;border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;font-size:12px;line-height:1.9;overflow-x:auto;color:#c9d6f2;margin:10px 0;}
+.tag{display:inline-block;padding:0 8px;font-size:11px;border:2px solid #0a0d18;margin:1px 2px;}
+.tag.loyal{background:#20304d;color:var(--loyal);} .tag.rebel{background:#42222f;color:var(--rebel);}
+.tag.spy{background:#3d2a12;color:var(--spy);} .tag.gold{background:#3a3010;color:var(--gold);}
+.tag.hist{background:#0f2a24;color:var(--hist);} .tag.red{background:#42201a;color:#ff8a8a;} .tag.green{background:#1d3a2a;color:var(--green);}
+blockquote{border-left:4px solid var(--hist);background:#0f1d1a;padding:8px 14px;margin:10px 0;color:#a8e8dc;}
+blockquote.gold{border-left-color:var(--gold);background:#231d0e;color:#f0d896;}
+ul,ol{margin:8px 0 8px 22px;} li{margin:4px 0;}
+.p0{color:var(--red);font-weight:bold;} .p1{color:var(--spy);} .p2{color:var(--dim);}
+.small{font-size:11.5px;}
+.para-card{border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line2,#262e4a);background:var(--panel2);padding:12px 14px;margin:10px 0;}
+.para-card .pc-title{font-size:15px;color:var(--gold);margin-bottom:6px;}
+.para-card .pc-meta{font-size:11px;color:var(--faint);margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>参数配置设计 <span>— 讨论稿 v1</span></h1>
+<div class="sub">范围：三步流程 × 全局系统级的可配置项设计 ｜ 用途：逐条讨论批注，确定 v3 实施范围 ｜ 优先级：P0=落地必需 P1=差异化 P2=锦上添花</div>
+
+<div class="panel" style="border-left:4px solid var(--green)">
+<b style="color:var(--green)">✅ 校准确认记录（v2 定稿 · 已全部实现于 v3.0 应用）</b>
+<table>
+<tr><th style="width:26%">设计点</th><th>确认结论</th></tr>
+<tr><td>画像来源优先级</td><td><b>CRM 带出 ＞ 用户手选 ＞ 首条消息推断</b>（固定，界面已注明；CRM 未接入时按统计特征自动推断）</td></tr>
+<tr><td>历史记忆合规</td><td><b>仅用统计特征，不回放具体案件内容</b>；从简设计——不建审批分级，CRM 字段为轻量静态占位符</td></tr>
+<tr><td>满意度目标值</td><td><b>按 case 类别配置</b>（五类攻势各设目标，配置中心可改）</td></tr>
+<tr><td>未达标轮数 N</td><td><b>N = 2</b>（连续 2 轮低于目标−15 → 换策略 + 人工预警）</td></tr>
+<tr><td>预测模型落地</td><td><b>v1 与 v2 同步推进，双跑对校</b>：v1 规则版为主干（已显性化为"成交概率"），v2 LLM 判读为模拟接口占位，每轮并行输出，Δ&gt;15 标记"建议人工复核"，接真实 LLM 后无缝替换</td></tr>
+<tr><td>仲裁优先级 × Pareto 权重</td><td><b>配置语义确认为同一含义，已合并</b>为「成本-满意度权衡策略」：三档（成本优先·守门人 / 均衡 / 满意度优先·质量督察）+ 史官选段权重微调滑杆。系统实现仍分两条消费路径（史官仲裁 / 内奸模式偏好），运营者只声明一次</td></tr>
+<tr><td>反贼原料源</td><td>设计为<b>可外接外部系统的接口填写配置</b>（启用开关 + API 地址 + 数据集条件，接口占位）</td></tr>
+<tr><td>配置分层</td><td><b>场景级 / 对练级 / 体验级 / 系统级 四级分区</b>（配置中心四页签），已实现</td></tr>
+<tr><td>配置门槛（新增）</td><td>配置中心顶部增设<b>「样板间」预置配置包</b>降低冷启动门槛：🚀快速上手 / 💰成本管控（电商零售）/ 💎高端服务（会员制）/ 🛡稳健合规（强监管行业）/ ⚔地狱压测（技能打磨）。一键应用全量配置，应用后可微调，微调自动标记"✏ 自定义"；恢复默认=回到快速上手样板</td></tr>
+</table>
+</div>
+
+<!-- ================= 一 ================= -->
+<h2><span class="no">壹</span>配置分层总览（一张图看全）</h2>
+<div class="panel">
+<table>
+<tr><th style="width:16%">配置层</th><th style="width:30%">参数</th><th style="width:22%">作用对象</th><th>优先级</th></tr>
+<tr><td rowspan="3"><b>场景级</b><br><span class="dim small">第一步·灌入时</span></td><td>用户画像（静态+动态）<br><span class="dim small">含历史记忆接入</span></td><td>反贼出题风格 / 忠臣策略先验</td><td class="p0">P0（你提出①）</td></tr>
+<tr><td>场景难度基线 + 证据严格度</td><td>反贼初始等级 / 忠臣证据判定</td><td class="p1">P1</td></tr>
+<tr><td>反贼原料源（历史工单选择）</td><td>剧本库来源</td><td class="p1">P1</td></tr>
+<tr><td rowspan="4"><b>对练级</b><br><span class="dim small">第二步·开练前</span></td><td><b>资金池</b>（三池+汇率+耗尽策略）</td><td>忠臣技能可用性 / 内奸置换依据</td><td class="p0">P0（你提出②）</td></tr>
+<tr><td><b>满意度目标值 + 预测模型</b></td><td>每轮成交概率 / 达标动作 / 转人工预警</td><td class="p0">P0（你提出③）</td></tr>
+<tr><td>技能池白名单 + 成本真实标定</td><td>忠臣技能库</td><td class="p0">P0</td></tr>
+<tr><td>内奸强度（预算/模式偏好）+ 对练深度</td><td>内奸 / 史官仲裁</td><td class="p1">P1</td></tr>
+<tr><td rowspan="2"><b>体验级</b><br><span class="dim small">第三步·加载时</span></td><td>话术风格 + 谈判节奏（激进/稳健）</td><td>忠臣语言层</td><td class="p1">P1</td></tr>
+<tr><td>转人工阈值（预测低位/红线/金额）</td><td>安全网</td><td class="p0">P0</td></tr>
+<tr><td rowspan="2"><b>系统级</b><br><span class="dim small">管理员配置台</span></td><td>仲裁优先级（成本↔满意度冲突时谁赢）</td><td>全局策略仲裁</td><td class="p0">P0</td></tr>
+<tr><td>技能版本灰度 + 数据回流策略 + 红线集合</td><td>技能发布 / 闭环节奏 / 合规</td><td class="p1">P1</td></tr>
+</table>
+</div>
+
+<!-- ================= 二 ================= -->
+<h2 class="yours"><span class="no">①</span>用户画像 + 历史记忆 <span class="dim small">（你提出 · 深化设计）</span></h2>
+<div class="panel">
+<h3>2.1 两层画像模型</h3>
+<table>
+<tr><th style="width:14%">层</th><th style="width:36%">字段</th><th style="width:25%">来源</th><th>刷新</th></tr>
+<tr><td><b>静态层</b></td><td>历史投诉次数 / 历史赔付总额 / 获取过的补偿类型（券/现金比）/ 会员等级 / 信用分 / 渠道偏好（12315偏好型？微博偏好型？）</td><td>CRM + 工单系统</td><td>案件结案时</td></tr>
+<tr><td><b>动态层</b></td><td>情绪曲线（每轮情绪值）/ 证据配合度 / 让步速度 / 确认信号灵敏度</td><td>本对话实时推断（规则或 LLM）</td><td>每轮</td></tr>
+</table>
+<h3>2.2 画像的双向消费（关键设计）</h3>
+<pre>
+<span class="tag rebel">喂反贼</span> 出题人格 = f(画像)：
+  理性协商型 → 摆事实列损失，升级慢，重证据
+  情绪主导型 → 感叹号多，攻势增益 +20%，但让步也快
+  专业索赔型 → 引法条（消法/民法典），等级直接 Lv.2 起步
+  职业敲诈型 → 试探底线话术，证据弱，走风控线
+  <span class="dim">多次维权老客 → 记忆升级加速（"上次你们就是这么说的"）</span>
+
+<span class="tag loyal">喂忠臣</span> 策略先验 = f(画像)：
+  高价值老客 → 预算上浮系数 ×1.5
+  高信用分 → 举证要求放宽（strong 门槛降低）
+  券敏感度低（历史拿过券但继续投诉）→ 内奸现金换券对此用户失效</pre>
+<blockquote><b>待你确认的设计点</b>：① 画像来源优先级——用户手选 / CRM 自动带出 / LLM 从对话首条消息推断，三种来源冲突时以谁为准？② 历史记忆的合规边界：赔付历史属于个人信息，跨案件调用的授权口径需要法务定义（建议：仅用统计特征，不回放具体案件内容）。</blockquote>
+</div>
+
+<!-- ================= 三 ================= -->
+<h2 class="yours"><span class="no">②</span>资金池 <span class="dim small">（你提出 · 深化设计）</span></h2>
+<div class="panel">
+<h3>3.1 从单池到三池</h3>
+<table>
+<tr><th>池</th><th>覆盖</th><th>配置项</th><th>耗尽行为</th></tr>
+<tr><td><b>现金赔付池</b></td><td>部分赔付 / 全额赔付</td><td>日/月总量、单案上限、审批分级（专员自主额度/主管/法务）</td><td>池空 → partial/full 自动禁用，技能坞置灰，只剩券+服务</td></tr>
+<tr><td><b>权益券池</b></td><td>优惠券 / 权益包</td><td>总量、面额档位、有效期</td><td>池空 → 券技能降级为纯道歉+加急</td></tr>
+<tr><td><b>服务成本池</b></td><td>专家通道工时 / 加急处理</td><td>工时折算单价、日容量</td><td>池空 → 专家通道排队（真实业务约束）</td></tr>
+</table>
+<h3>3.2 池间汇率——内奸的经济学基础</h3>
+<pre>配置：1 元现金 = N 元券面额（如 1:3）= M 分钟专家工时
+
+内奸〔Mode B · 现金换券〕的置换判定将基于汇率：
+  置换收益 = (现金成本 − 券成本/汇率) × 成交概率衰减折损
+  收益 > 0 → 触发置换压力（当前为 40% 固定概率，v3 改为汇率驱动）</pre>
+<h3>3.3 与满意度目标的联动</h3>
+<p>资金池是<b>硬约束</b>，满意度目标是<b>软目标</b>：池耗尽时满意度预测再高也无法加码——此时引擎应提前触发"最优可用方案确认"（在池见底前主动锁定成交），而非硬扛到破裂。这是「预算见底」仲裁规则的业务化升级。</p>
+</div>
+
+<!-- ================= 四 ================= -->
+<h2 class="yours"><span class="no">③</span>满意度目标值 + 预测小模型 <span class="dim small">（你提出 · 深化设计 · 核心中的核心）</span></h2>
+<div class="panel">
+<blockquote class="gold"><b>先说结论</b>：引擎里的 <code>resolution_score</code>（解决率）就是满意度预测的 v0——它的定义正是"用户与系统达成一致的概率"（每轮按攻势强度×技能力度×成本累积）。v3 要做的是三件事：<b>显性化</b>（改名为成交概率并逐轮显示）、<b>目标化</b>（挂目标线）、<b>动作化</b>（达标/未达标触发策略）。</blockquote>
+<h3>4.1 三版演进路径</h3>
+<table>
+<tr><th>版本</th><th>形态</th><th>特征</th><th>说明</th></tr>
+<tr><td><b>v0（已实现）</b></td><td>规则累积分</td><td>攻势增益、技能力度、成本（隐含在技能选择里）</td><td>可解释、零成本、已驱动全部现有机制</td></tr>
+<tr><td><b>v1（轻量模型）</b></td><td>逻辑回归 / GBDT</td><td>攻势类型one-hot、等级、证据强度、轮次、累计成本、已用技能序列、攻势压力、均衡信号、情绪词密度、确认信号</td><td>沙箱对练全记录 = 天然训练集（成交回合=正样本、仲裁终止/破裂=负样本）；真实对话回流增量训练</td></tr>
+<tr><td><b>v2（LLM 判读）</b></td><td>每轮对话后 LLM 输出 0-100 成交概率 + 影响因子</td><td>全对话上下文</td><td>可解释性弱于 v1，建议双跑对校（v1 保底，v2 拟人）</td></tr>
+</table>
+<h3>4.2 目标值配置与达标动作（与 v2.3 成交机制的衔接）</h3>
+<pre>配置：按 case 类别设目标值（示例）
+  物流破损类 ≥85% ｜ 商品质量类 ≥80% ｜ 服务纠纷类 ≥65% ｜ 涉法类 ≥50%（转法务前的止损线）
+
+每轮预测输出 → 三段动作：
+  预测 ≥ 目标 ──────→ 忠臣<b>主动求确认</b>（"您看这个方案可以吗"）→ v2.3 成交检测 → 收尾
+  预测 ∈ [目标-15, 目标) → 继续当前路径，但史官在史册标注"接近达标，观察一轮"
+  预测 < 目标-15 连续 N 轮 → 换策略（升档技能）/ 升专家通道 / 预警人工介入
+
+UI 呈现：解决率进度条上加<b>目标刻度线</b>（金色横线），沙箱与真实对话同一把尺子</pre>
+<h3>4.3 训练数据闭环（这个产品的隐藏金矿）</h3>
+<p>沙箱每轮对练全记录（对练原文+四角色思考+成交/破裂结局）+ 真实对话回流 = 持续增长的标注数据集。<b>反贼越强，预测模型越准</b>——这是三国杀架构对预测模型的间接贡献：刁钻场景覆盖度决定模型泛化能力。</p>
+<blockquote><b>待你确认的设计点</b>：① 目标值按 case 类别配置还是全局一个值？② 未达标 N 轮的 N 取多少（建议 2）？③ 预测模型的落地顺序——先上 v0 显性化（改 UI 即可）还是直接训 v1？</blockquote>
+</div>
+
+<!-- ================= 五 ================= -->
+<h2><span class="no">贰</span>我建议补充的配置项（除你三项之外）</h2>
+<div class="panel">
+
+<div class="para-card">
+<div class="pc-title">A. 技能池白名单 + 真实成本标定 <span class="tag red">P0</span></div>
+<div class="pc-meta">作用对象：忠臣技能库 ｜ 配置层：对练级</div>
+当前技能成本是演示单位（¥60/¥150/¥800/¥3,000）。业务侧需标定：每技能的真实成本、可用性开关（如"本案禁用全额赔付"）、审批档位。这是<b>从演示到落地的第一步</b>。</div>
+
+<div class="para-card">
+<div class="pc-title">B. 成本-效果 Pareto 权重 <span class="tag red">P0</span></div>
+<div class="pc-meta">作用对象：内奸模式选择 + 史官最优片段判定 ｜ 配置层：对练级</div>
+省钱 ↔ 满意滑杆（0-100）。省钱端：内奸 Mode B 频率↑、史官偏好低成本片段、蒸馏技能偏"权益置换法"；满意端：反之。这是<b>三国杀的灵魂参数</b>——它决定蒸馏出的技能长什么样。</div>
+
+<div class="para-card">
+<div class="pc-title">C. 转人工阈值（安全网三触发） <span class="tag red">P0</span></div>
+<div class="pc-meta">作用对象：全局 ｜ 配置层：体验级</div>
+① 满意度预测连续 N 轮 < 下限且无改善；② 红线命中（人身损害/未成年/欺诈嫌疑/大V舆情）；③ 索赔金额超单案上限。触发后：暂停自动决策 → 生成案件摘要移交人工（沙箱继续后台推演供人工参考）。</div>
+
+<div class="para-card">
+<div class="pc-title">D. 仲裁优先级声明 <span class="tag red">P0</span></div>
+<div class="pc-meta">作用对象：全局策略仲裁 ｜ 配置层：系统级</div>
+成本权重与满意度目标冲突时谁赢？两个预设档：<b>满意度优先</b>（成本上限为硬约束）/ <b>成本优先</b>（满意度下限为底线）。业务侧声明后，内奸的行为语义随之改变（成本优先时内奸是"成本守门人"，满意度优先时内奸是"质量督察"）。</div>
+
+<div class="para-card">
+<div class="pc-title">E. 反贼原料源 <span class="tag gold">P1</span></div>
+<div class="pc-meta">作用对象：剧本库 ｜ 配置层：场景级</div>
+接历史工单后：按渠道/品类/时间窗/赔付结果选择（如"近90天食品类差评工单中最终升级投诉的子集"）——真实数据喂养的反贼才是专业反贼。支持与手动灌入混编。</div>
+
+<div class="para-card">
+<div class="pc-title">F. 内奸强度与模式偏好 <span class="tag gold">P1</span></div>
+<div class="pc-meta">作用对象：内奸 ｜ 配置层：对练级</div>
+干预预算（0=纯验证 / 3=标准 / 6=地狱）、模式偏好（加压为主/降本为主/均衡）、现金换券激进度（汇率驱动/固定概率）。用户反馈"需改进"时的预算加成幅度也可配。</div>
+
+<div class="para-card">
+<div class="pc-title">G. 对练深度与收敛阈值 <span class="tag gold">P1</span></div>
+<div class="pc-meta">作用对象：史官仲裁 ｜ 配置层：对练级</div>
+回合上限（快速验证 6 / 标准 12 / 深度打磨 20）、收敛条件（均衡阈值/稳定轮数）、停滞保护轮数、预算见底动作（止损蒸馏 / 最优可用方案锁定）。</div>
+
+<div class="para-card">
+<div class="pc-title">H. 话术风格 + 谈判节奏 <span class="tag gold">P1</span></div>
+<div class="pc-meta">作用对象：忠臣语言层 ｜ 配置层：体验级</div>
+风格：正式 / 亲和 / 专业简洁（影响回复模板选库）。节奏：激进让步（首回合即出实质方案）vs 稳健（先验证诉求再报价）——影响 chooseSkill 的首技能倾向。</div>
+
+<div class="para-card">
+<div class="pc-title">I. 技能版本灰度 + 数据回流策略 <span class="p2">P2</span></div>
+<div class="pc-meta">作用对象：技能发布 / 闭环节奏 ｜ 配置层：系统级</div>
+新技能 v(N+1) 先 20% 流量与 v(N) 对照，满意度预测无显著差异才全量。回流：真实对话每 N 轮自动回灌沙箱（自动闭环）vs 仅人工反馈触发（可控闭环）。</div>
+
+<div class="para-card">
+<div class="pc-title">J. 红线集合 <span class="tag gold">P1</span></div>
+<div class="pc-meta">作用对象：转人工+法务 ｜ 配置层：系统级</div>
+默认红线（人身损害/食安/欺诈）之外，业务可增补：涉未成年人、涉舆情大V、涉监管在办案件、涉上市敏感期。红线命中即出沙盒、进人工。</div>
+</div>
+
+<!-- ================= 六 ================= -->
+<h2><span class="no">叁</span>参数耦合关系（哪些配置会互相打架）</h2>
+<div class="panel">
+<table>
+<tr><th>冲突对</th><th>表现</th><th>仲裁机制</th></tr>
+<tr><td>满意度目标 ↔ 成本权重</td><td>目标 85% + 省钱优先 → 忠臣被迫用券硬打高压场景</td><td>仲裁优先级声明（参数 D）</td></tr>
+<tr><td>资金池上限 ↔ 伤害下限规则</td><td>现金池空 + 人身损害案 → 下限要求部分赔付但池空</td><td>红线直接转人工（池约束不适用于人身损害案，法务兜底）</td></tr>
+<tr><td>用户画像"敲诈型" ↔ 满意度目标</td><td>敲诈型用户满意度天然难达标，拉低模型指标</td><td>分画像统计满意度（敲诈型单独口径，以"守线率"考核而非成交率）</td></tr>
+<tr><td>内奸预算 ↔ 对练深度</td><td>回合上限 6 + 预算 4 → 内奸戏份占比过重</td><td>联动约束：预算 ≤ 回合上限/3</td></tr>
+</table>
+</div>
+
+<!-- ================= 七 ================= -->
+<h2><span class="no">肆</span>建议实施顺序（供拍板）</h2>
+<div class="panel">
+<pre><b>P0 第一批（v3.0 · 落地基石）</b>
+  ① 满意度目标值 + v0 预测显性化（改名成交概率、UI 目标线、达标动作三段式）
+  ② 资金池三池化 + 池耗尽降级
+  ③ 技能池白名单 + 真实成本标定入口
+  ④ 转人工阈值三触发
+  ⑤ 仲裁优先级声明
+<b>P1 第二批（v3.5 · 差异化）</b>
+  ⑥ 用户画像两层模型 + 双向消费
+  ⑦ 成本-效果 Pareto 权重滑杆
+  ⑧ 反贼原料源（历史工单接入）
+  ⑨ 内奸强度/话术风格/红线集合/对练深度
+<b>P2 第三批（v4 · 规模化）</b>
+  ⑩ 预测模型 v1 训练（沙箱数据闭环）
+  ⑪ 技能灰度发布
+  ⑫ 数据回流自动化</pre>
+<blockquote class="gold"><b>讨论建议</b>：本轮先拍板 P0 五项的细节（尤其是满意度目标值的三段动作阈值、资金池耗尽策略、仲裁优先级预设档），P0 确认后我可以直接在现有应用上实现——引擎结构已经就位，这些都是参数化改造而非结构改造。</blockquote>
+</div>
+
+<p class="dim small" style="text-align:center;padding:10px 0 20px">三国杀 · 赔付谈判技能工厂 — 参数配置设计讨论稿 v1 ｜ 待批注后进入 v3.0 实施</p>
+</div>
+</body>
+</html>

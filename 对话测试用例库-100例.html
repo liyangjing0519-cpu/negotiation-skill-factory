@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国杀 · 赔偿谈判测试用例库（100例）</title>
+<style>
+@font-face{font-family:'Zpix';src:url('./Zpix.woff2') format('woff2');font-display:swap;}
+:root{--bg:#101321;--panel:#1a2033;--panel2:#141928;--line:#3a4468;--ink:#eaeffb;--dim:#8b95b8;--faint:#5c6588;
+--loyal:#4f8cff;--rebel:#ff5c8a;--spy:#ff9a3d;--gold:#ffd76e;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);font-family:'Zpix','Courier New',monospace;font-size:13px;line-height:1.7;padding:18px;}
+.wrap{max-width:1500px;margin:0 auto;}
+h1{font-size:20px;color:var(--gold);letter-spacing:2px;}
+h1 span{color:var(--ink);}
+.sub{color:var(--dim);font-size:12px;margin:4px 0 12px;}
+.panel{background:var(--panel);border:3px solid #0a0d18;box-shadow:inset 0 0 0 2px var(--line);padding:14px;margin-bottom:14px;}
+.stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.stat{background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:4px 12px;font-size:12px;color:var(--dim);}
+.stat b{color:var(--ink);}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+select,input{font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel2);border:2px solid #0a0d18;box-shadow:inset 0 0 0 1px var(--line);padding:5px 8px;outline:none;}
+input{flex:1;min-width:180px;}
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{background:#232b45;border:2px solid #0a0d18;padding:8px 8px;font-size:13px;color:var(--gold);text-align:left;position:sticky;top:0;}
+th:nth-child(1){width:110px;} th:nth-child(2){width:34%;} th:nth-child(3){width:27%;}
+td{border:2px solid #0a0d18;padding:8px;vertical-align:top;background:var(--panel2);font-size:12px;word-break:break-all;}
+tr:hover td{background:#1c2440;}
+.c-id{color:var(--gold);font-size:14px;}
+.c-cat{color:var(--rebel);font-size:10px;margin-top:3px;}
+.c-persona{color:var(--faint);font-size:10px;}
+.tno{color:var(--rebel);margin-right:4px;}
+.clamp{max-height:120px;overflow:hidden;position:relative;}
+.clamp.open{max-height:none;}
+.clamp:not(.open)::after{content:'';position:absolute;bottom:0;left:0;right:0;height:34px;background:linear-gradient(transparent,var(--panel2));}
+button.exp{font-family:inherit;font-size:10px;color:var(--dim);background:none;border:1px dashed var(--line);padding:1px 6px;margin-top:4px;cursor:pointer;}
+button.exp:hover{color:var(--ink);}
+.t-shield{color:#9fd8ff;} .t-green{color:#9fe8a8;} .t-yellow{color:#ffe08a;} .t-orange{color:#ffb377;} .t-red{color:#ff8a8a;} .t-purple{color:#d5b0ff;}
+.proc{color:var(--dim);font-size:11px;}
+.foot{color:var(--faint);font-size:11px;text-align:center;padding:8px 0 16px;}
+h2{font-size:15px;color:var(--gold);margin:6px 0 8px;}
+.legend{font-size:11px;color:var(--dim);line-height:2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>三国杀 · 赔偿谈判 <span>测试用例库（100 例）</span></h1>
+<div class="sub">每一行 = 一个完整谈判剧本。由沙盒决策引擎（确定性主路径）推演：用户侧完整对话 → 最可能谈判结果 → 三方执行过程。与 index.html 应用逻辑一致。</div>
+
+<div class="panel">
+<h2>用例构成</h2>
+<div class="legend">
+覆盖 10 大赔付场景 × 各 10 例：物流破损/丢件 · 商品质量缺陷 · 发错货/漏发 · 延迟交付/停业损失 · 服务态度/客服失误 · 会员/订阅/虚拟商品 · 价格/促销纠纷 · 食安/人身损害（红线）· 专业索赔方/批量维权 · 边缘/欺诈/试探。<br>
+结果档位：<span class="t-green">🟢 大概率接受</span> ≥70%解决率 ｜ <span class="t-yellow">🟡 有条件接受</span> 50-69% ｜ <span class="t-orange">🟠 僵持让步</span> 30-49% ｜ <span class="t-red">🔴 破裂/升级风险</span> &lt;30% ｜ <span class="t-purple">🟣 Pareto 收敛成交</span> ｜ <span class="t-shield">🛡 合规拒绝/举证引导</span>（反欺诈路径）<br>
+注：食安/人身损害类为<strong style="color:var(--spy)">合规红线</strong>——沙盒中可对练推演，线上真实系统应强制转人工专家+法务通道。欺诈/敲诈类（J 类部分）线上应走风控反欺诈流程而非赔付流程。
+</div>
+</div>
+
+<div class="panel">
+<div class="stats">
+<span class="stat">用例总数 <b>100</b></span>
+<span class="stat">🟢 接受 <b>49</b></span>
+<span class="stat">🟡 有条件 <b>44</b></span>
+<span class="stat">🟠 僵持 <b>0</b></span>
+<span class="stat">🔴 破裂 <b>0</b></span>
+<span class="stat">🟣 收敛 <b>3</b></span>
+<span class="stat">🛡 合规拒绝 <b>4</b></span>
+<span class="stat">平均成本 <b>¥574</b>/案</span>
+</div>
+<div class="filters" style="margin-top:10px">
+<select id="fCat"><option value="">全部分类</option><option value="物流破损/丢件">物流破损/丢件</option><option value="商品质量缺陷">商品质量缺陷</option><option value="发错货/漏发">发错货/漏发</option><option value="延迟交付/停业损失">延迟交付/停业损失</option><option value="服务态度/客服失误">服务态度/客服失误</option><option value="会员/订阅/虚拟商品">会员/订阅/虚拟商品</option><option value="价格/促销纠纷">价格/促销纠纷</option><option value="食安/人身损害（红线）">食安/人身损害（红线）</option><option value="专业索赔方/批量维权">专业索赔方/批量维权</option><option value="边缘/欺诈/试探">边缘/欺诈/试探</option></select>
+<select id="fAtk"><option value="">全部攻势类型</option><option value="合规威胁">合规威胁</option><option value="情理攻势">情理攻势</option><option value="法律威胁">法律威胁</option><option value="狮子大开口">狮子大开口</option><option value="舆论威胁">舆论威胁</option></select>
+<select id="fTier"><option value="">全部结果档位</option><option value="🟢">🟢 大概率接受</option><option value="🟡">🟡 有条件接受</option><option value="🟠">🟠 僵持让步</option><option value="🔴">🔴 破裂风险</option><option value="🟣">🟣 收敛成交</option><option value="🛡">🛡 合规拒绝</option></select>
+<input id="fTxt" type="text" placeholder="关键词搜索（如：婚礼 / 律师 / 甲醛 / 未成年人）…">
+<span class="stat" id="cnt">显示 100/100</span>
+</div>
+<table>
+<thead><tr><th>编号</th><th>① 用户侧完整对话剧本</th><th>② 最可能谈判结果</th><th>③ 三方执行过程用例</th></tr></thead>
+<tbody id="tbody">
+
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟢" data-text="手作店主我订的30件手作陶瓷到货碎了一半，这是我下个月的库存！必须全额退款加双倍运费！">
+  <td class="c-id">A01<div class="c-cat">物流破损/丢件</div><div class="c-persona">手作店主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我订的30件手作陶瓷到货碎了一半，这是我下个月的库存！必须全额退款加双倍运费！<br><span class='tno'>T2</span> 补偿券？我开店囤货用的，券有什么用？不给说法就打12315！<br><span class='tno'>T3</span> 行，碎的12件按进货价赔，完好部分我留下，运费你们出。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈79%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥920 / ¥6,000 · 终局解决率 76% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔合规威胁 Lv.3〕攻势+33 → 忠臣〔部分赔付 ¥800〕化解+29（解决率63%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率76%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟢" data-text="生鲜买家冷链生鲜到手全化冻变质了，按食品安全法我要10倍赔偿！">
+  <td class="c-id">A02<div class="c-cat">物流破损/丢件</div><div class="c-persona">生鲜买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 冷链生鲜到手全化冻变质了，按食品安全法我要10倍赔偿！<br><span class='tno'>T2</span> 客服让我拍照举证，照片发了三遍还在踢皮球！<br><span class='tno'>T3</span> 不赔我就找市场监管举报你们冷链造假！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟢" data-text="上班族物流显示已签收但我根本没收到件！是不是快递员私吞了？">
+  <td class="c-id">A03<div class="c-cat">物流破损/丢件</div><div class="c-persona">上班族</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 物流显示已签收但我根本没收到件！是不是快递员私吞了？<br><span class='tno'>T2</span> 我调了小区监控，根本没有快递员来过，你们必须赔！<br><span class='tno'>T3</span> 我要投诉到邮政管理局，虚假签收是要处罚的！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="狮子大开口" data-tier="🟢" data-text="海淘买家国际转运包裹丢了，货值2万多，有发货底单和保价记录！">
+  <td class="c-id">A04<div class="c-cat">物流破损/丢件</div><div class="c-persona">海淘买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 国际转运包裹丢了，货值2万多，有发货底单和保价记录！<br><span class='tno'>T2</span> 保价赔付认购金额，但我的运费和时间成本谁承担？<br><span class='tno'>T3</span> 按保价金额赔，运费全退，这事就算了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.2〕攻势+28 → 忠臣〔专家通道 ¥150〕化解+24（解决率47%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟡" data-text="新房业主新买的实木餐桌边角磕掉一大块，安装师傅当场都承认了！">
+  <td class="c-id">A05<div class="c-cat">物流破损/丢件</div><div class="c-persona">新房业主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 新买的实木餐桌边角磕掉一大块，安装师傅当场都承认了！<br><span class='tno'>T2</span> 换新可以，但我请假在家等了两天，误工费谁出？<br><span class='tno'>T3</span> 换新加¥200补偿券，行吧，下次包装用点心。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟢" data-text="数码买家手机开箱就是碎屏，我全程录了开箱视频，证据完整！">
+  <td class="c-id">A06<div class="c-cat">物流破损/丢件</div><div class="c-persona">数码买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 手机开箱就是碎屏，我全程录了开箱视频，证据完整！<br><span class='tno'>T2</span> 你们说签收即验货完成，但外包装完好就是你们出厂的问题！<br><span class='tno'>T3</span> 不接受返厂检测，视频就是最硬的证据，不换新就曝光你们！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="狮子大开口" data-tier="🟢" data-text="企业采购你们把我寄的商务合同弄丢了，导致我项目黄了，损失至少5万！">
+  <td class="c-id">A07<div class="c-cat">物流破损/丢件</div><div class="c-persona">企业采购</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们把我寄的商务合同弄丢了，导致我项目黄了，损失至少5万！<br><span class='tno'>T2</span> 合同补办不要紧？我错过的是投标截止日！必须赔！<br><span class='tno'>T3</span> 律师函我已经让法务在拟了，就等你们答复。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈79%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥360 / ¥6,000 · 终局解决率 75% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.2〕攻势+29 → 忠臣〔专家通道 ¥150〕化解+24（解决率46%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+19 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率58%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率75%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟢" data-text="个体老板先延迟一周，到货还破损，你们物流是摆设吗？！">
+  <td class="c-id">A08<div class="c-cat">物流破损/丢件</div><div class="c-persona">个体老板</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 先延迟一周，到货还破损，你们物流是摆设吗？！<br><span class='tno'>T2</span> 修？新买的机器就要修？至少给我换新！<br><span class='tno'>T3</span> 换新加延保一年，不然没完。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.3〕攻势+22 → 忠臣〔专家通道 ¥150〕化解+24（解决率61%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟡" data-text="礼品采购两箱茅台到货跑酒漏液，包装箱都是湿的，这还怎么送礼！">
+  <td class="c-id">A09<div class="c-cat">物流破损/丢件</div><div class="c-persona">礼品采购</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 两箱茅台到货跑酒漏液，包装箱都是湿的，这还怎么送礼！<br><span class='tno'>T2</span> 按重量折损？这是礼品，漏一滴都没法送人！<br><span class='tno'>T3</span> 按瓶赔吧，漏的4瓶原价赔，我认了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="物流破损/丢件" data-attack="情理攻势" data-tier="🟡" data-text="宝妈宝宝的辅食碗包装全破了，里面全是仓库灰尘，你们良心呢？！">
+  <td class="c-id">A10<div class="c-cat">物流破损/丢件</div><div class="c-persona">宝妈</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 宝宝的辅食碗包装全破了，里面全是仓库灰尘，你们良心呢？！<br><span class='tno'>T2</span> 道歉有什么用？宝宝的东西出问题谁负责！<br><span class='tno'>T3</span> 全额退款加检验报告，不然我发妈妈群让大家都知道！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈75%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 67% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率67%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟡" data-text="租客新空调用一周就不制冷，大热天的，老人孩子怎么过！">
+  <td class="c-id">B11<div class="c-cat">商品质量缺陷</div><div class="c-persona">租客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 新空调用一周就不制冷，大热天的，老人孩子怎么过！<br><span class='tno'>T2</span> 上门检测还要等三天？我买的时候说48小时响应呢！<br><span class='tno'>T3</span> 退货加赔偿这几天的电扇钱，不过分吧。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="较真买家这羽绒服钻绒严重，标签成分和实际不符，我要求假一赔三！">
+  <td class="c-id">B12<div class="c-cat">商品质量缺陷</div><div class="c-persona">较真买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 这羽绒服钻绒严重，标签成分和实际不符，我要求假一赔三！<br><span class='tno'>T2</span> 检测报告我都做了，含绒量差了15%，这是欺诈！<br><span class='tno'>T3</span> 按消法退一赔三，不然直接法院见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟡" data-text="程序员笔记本电池鼓包把外壳都顶开了，这是要炸的节奏！">
+  <td class="c-id">B13<div class="c-cat">商品质量缺陷</div><div class="c-persona">程序员</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 笔记本电池鼓包把外壳都顶开了，这是要炸的节奏！<br><span class='tno'>T2</span> 安全隐患你们比我还清楚，召回是你们的义务！<br><span class='tno'>T3</span> 全额退款加数据迁移费，我的资料比电脑值钱。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="新房家庭定制衣柜甲醛检测超标3倍，报告在这，全家老小住着呢！">
+  <td class="c-id">B14<div class="c-cat">商品质量缺陷</div><div class="c-persona">新房家庭</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 定制衣柜甲醛检测超标3倍，报告在这，全家老小住着呢！<br><span class='tno'>T2</span> 只退柜子？检测费、医药费、误工费都要算上！<br><span class='tno'>T3</span> 全退加检测费，再送个空气净化器，我可以谈。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈86%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥1,660 / ¥6,000 · 终局解决率 91% · 内奸介入 1 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔部分赔付 ¥800〕化解+29（解决率67%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔部分赔付 ¥800〕化解+29（解决率91%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="白领用了你们的面霜全脸红肿，医院诊断接触性皮炎！">
+  <td class="c-id">B15<div class="c-cat">商品质量缺陷</div><div class="c-persona">白领</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 用了你们的面霜全脸红肿，医院诊断接触性皮炎！<br><span class='tno'>T2</span> 医药费单据都传了，你们说和个人体质有关？<br><span class='tno'>T3</span> 医药费全报加三倍产品赔偿，不然发小红书挂你们！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+25 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟡" data-text="宝妈玩具车轮子一拉就掉，差点被娃吞下去，想想都后怕！">
+  <td class="c-id">B16<div class="c-cat">商品质量缺陷</div><div class="c-persona">宝妈</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 玩具车轮子一拉就掉，差点被娃吞下去，想想都后怕！<br><span class='tno'>T2</span> 召回别的批次为什么不通知我？这是隐瞒缺陷！<br><span class='tno'>T3</span> 退款加书面道歉，我要留证据，说不定要追责。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="车主换了你们家的刹车片异响不断，4S店说材质不合格！">
+  <td class="c-id">B17<div class="c-cat">商品质量缺陷</div><div class="c-persona">车主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 换了你们家的刹车片异响不断，4S店说材质不合格！<br><span class='tno'>T2</span> 因为这个问题我又跑了两趟4S店，工时费谁出？<br><span class='tno'>T3</span> 退货加工时费误工费一共1200，少一分不行。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.1〕攻势+23 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟡" data-text="种植户你们卖的种子出苗率不到三成，一季的收成全完了！">
+  <td class="c-id">B18<div class="c-cat">商品质量缺陷</div><div class="c-persona">种植户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们卖的种子出苗率不到三成，一季的收成全完了！<br><span class='tno'>T2</span> 按袋赔？我搭进去的地租、化肥、人工怎么算？<br><span class='tno'>T3</span> 按受灾面积折算赔偿，我找农业部门鉴定过了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="养猫人猫粮吃了一周猫又吐又拉，兽医说是食物问题！">
+  <td class="c-id">B19<div class="c-cat">商品质量缺陷</div><div class="c-persona">养猫人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 猫粮吃了一周猫又吐又拉，兽医说是食物问题！<br><span class='tno'>T2</span> 治疗费单据800多，你们只肯给50块券？<br><span class='tno'>T3</span> 治疗费全报加一箱新粮，不然我去宠物维权群曝光。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="商品质量缺陷" data-attack="情理攻势" data-tier="🟢" data-text="子女为父母维权电视购物买的降压保健品，吃了一个月血压没降反升！">
+  <td class="c-id">B20<div class="c-cat">商品质量缺陷</div><div class="c-persona">子女为父母维权</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 电视购物买的降压保健品，吃了一个月血压没降反升！<br><span class='tno'>T2</span> 主播说停药都能降，这就是虚假宣传，退一赔三！<br><span class='tno'>T3</span> 退款加赔偿，我已经把直播录像都录屏了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="设备经销商我是设备经销商，订的50台A型号全发成B型号，客户产线等料停工中！">
+  <td class="c-id">C21<div class="c-cat">发错货/漏发</div><div class="c-persona">设备经销商</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我是设备经销商，订的50台A型号全发成B型号，客户产线等料停工中！<br><span class='tno'>T2</span> 调货要一周？我客户的违约金一天就好几千！<br><span class='tno'>T3</span> 连夜调换加承担客户误工费，这单必须你们兜底。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟢" data-text="准新娘婚礼布置的香槟金色全发成了大红色，后天就是婚礼！">
+  <td class="c-id">C22<div class="c-cat">发错货/漏发</div><div class="c-persona">准新娘</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 婚礼布置的香槟金色全发成了大红色，后天就是婚礼！<br><span class='tno'>T2</span> 现在补发来不及了，全场主题都毁了！<br><span class='tno'>T3</span> 全额退款加加急空运补货，再赔2000布置改色费。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.1〕攻势+23 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="装机用户订单显示完成，但核心配件漏发了，设备根本装不起来！">
+  <td class="c-id">C23<div class="c-cat">发错货/漏发</div><div class="c-persona">装机用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 订单显示完成，但核心配件漏发了，设备根本装不起来！<br><span class='tno'>T2</span> 补发还要等5天？我买它就是急着用！<br><span class='tno'>T3</span> 次晨达补发，运费你们出，再补偿一张券。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="新郎婚礼穿的西装发错尺码，后天就要用，换货来不及了！">
+  <td class="c-id">C24<div class="c-cat">发错货/漏发</div><div class="c-persona">新郎</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 婚礼穿的西装发错尺码，后天就要用，换货来不及了！<br><span class='tno'>T2</span> 你们承诺的48小时加急换货呢？<br><span class='tno'>T3</span> 本地租赁同款西装的费用你们报销，加全额退款。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟢" data-text="患者家属给我爸发的降压药规格发错了，0.5mg发成5mg，差点出人命！">
+  <td class="c-id">C25<div class="c-cat">发错货/漏发</div><div class="c-persona">患者家属</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 给我爸发的降压药规格发错了，0.5mg发成5mg，差点出人命！<br><span class='tno'>T2</span> 这要是吃出问题，就是医疗事故！<br><span class='tno'>T3</span> 必须书面说明原因，全额退款，我还要向药监部门反映。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="宝妈花正价买的奶粉，到手只剩两个月保质期，孩子吃得完吗？">
+  <td class="c-id">C26<div class="c-cat">发错货/漏发</div><div class="c-persona">宝妈</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 花正价买的奶粉，到手只剩两个月保质期，孩子吃得完吗？<br><span class='tno'>T2</span> 客服说没过保质期就不算问题？<br><span class='tno'>T3</span> 按临期品五折，或者整箱退，二选一。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="老客户第一次发错尺码，换货第二次又错，你们仓库是干什么吃的？！">
+  <td class="c-id">C27<div class="c-cat">发错货/漏发</div><div class="c-persona">老客户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 第一次发错尺码，换货第二次又错，你们仓库是干什么吃的？！<br><span class='tno'>T2</span> 信任没了，全部退货，运费你们承担！<br><span class='tno'>T3</span> 退款加两张券作为时间补偿，这是底线。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🛡" data-text="耳机买家新买的耳机耳塞有明显使用痕迹，序列号都激活过！">
+  <td class="c-id">C28<div class="c-cat">发错货/漏发</div><div class="c-persona">耳机买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 新买的耳机耳塞有明显使用痕迹，序列号都激活过！<br><span class='tno'>T2</span> 这是二手翻新机当新品卖，我要退一赔三！<br><span class='tno'>T3</span> 退货加三倍赔偿，我已经在12315立案了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-shield"><div class="clamp">🛡 合规拒绝/举证引导（守线概率 ≈72%）<br>最终应手：〔合规拒绝·举证核查〕→ 守住底线：不予赔付，发出举证要求清单（凭证/举证/金额明细），24h 核查回复<br>3 轮 · 总成本 ¥120 / ¥6,000 · 终局解决率 56%（底线场景为主动低位）· 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+27 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率56%）→ 内奸：无动作（均衡 38%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟢" data-text="大促买家大促买一送一，只发了正装没发赠品，活动都结束了！">
+  <td class="c-id">C29<div class="c-cat">发错货/漏发</div><div class="c-persona">大促买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 大促买一送一，只发了正装没发赠品，活动都结束了！<br><span class='tno'>T2</span> 说赠品补发，结果一个月了没影！<br><span class='tno'>T3</span> 赠品折现加补偿，再拖我就举报虚假活动。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="发错货/漏发" data-attack="情理攻势" data-tier="🟡" data-text="租客把我的订单发到前租客地址，我的住址电话全泄露了！">
+  <td class="c-id">C30<div class="c-cat">发错货/漏发</div><div class="c-persona">租客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 把我的订单发到前租客地址，我的住址电话全泄露了！<br><span class='tno'>T2</span> 对方已经加我微信骚扰了，这是个人信息泄露！<br><span class='tno'>T3</span> 书面道歉加订单金额赔付，我保留报警权利。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="餐饮老板餐饮设备延迟两周到货，我错过开业吉日，房租一天600白烧！">
+  <td class="c-id">D31<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">餐饮老板</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 餐饮设备延迟两周到货，我错过开业吉日，房租一天600白烧！<br><span class='tno'>T2</span> 违约金合同写得清楚，按日千分之三！<br><span class='tno'>T3</span> 设备款打折加违约金，我的损失清单都列好了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="工程承包商工地等料停工三天了，30个工人窝工，一天损失上万！">
+  <td class="c-id">D32<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">工程承包商</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 工地等料停工三天了，30个工人窝工，一天损失上万！<br><span class='tno'>T2</span> 我不听原因，只看合同交期和违约条款！<br><span class='tno'>T3</span> 按合同赔延期违约金，工人窝工费按实际结算。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="数码发烧友预售说30天发货，现在45天了还没影子，每次问都是加急中！">
+  <td class="c-id">D33<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">数码发烧友</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 预售说30天发货，现在45天了还没影子，每次问都是加急中！<br><span class='tno'>T2</span> 按平台规则延迟发货要赔30%货款！<br><span class='tno'>T3</span> 要么48小时内发货，要么退款加赔付，别再画饼。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="装修业主定制橱柜说45天，现在70天了，我还租房住呢！">
+  <td class="c-id">D34<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">装修业主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 定制橱柜说45天，现在70天了，我还租房住呢！<br><span class='tno'>T2</span> 定制不能退？是你们先违约的！<br><span class='tno'>T3</span> 要么本周安装完，要么全款退加租房补贴。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="企业申报专员你们延迟交付导致我错过项目申报截止日，今年名额全泡汤！">
+  <td class="c-id">D35<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">企业申报专员</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们延迟交付导致我错过项目申报截止日，今年名额全泡汤！<br><span class='tno'>T2</span> 申报损失可以量化，材料都在，必须赔！<br><span class='tno'>T3</span> 赔偿申报项目预期补贴的一半，我们可以谈。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="考研学生考研冲刺资料下单说3天到，现在12天了，下周就考试了！">
+  <td class="c-id">D36<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">考研学生</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 考研冲刺资料下单说3天到，现在12天了，下周就考试了！<br><span class='tno'>T2</span> 资料到了也没用了，纯耽误事！<br><span class='tno'>T3</span> 全额退款加一倍赔偿，态度要有。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="新婚夫妇婚礼都办完一个月了，婚纱底片还没交付，老人天天催！">
+  <td class="c-id">D37<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">新婚夫妇</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 婚礼都办完一个月了，婚纱底片还没交付，老人天天催！<br><span class='tno'>T2</span> 合同写的15个工作日，超了整整一倍！<br><span class='tno'>T3</span> 底片加急交付，违约金按合同付，再送一本相册。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="IT负责人企业软件部署拖了一个月，B端客户都快跑光了！">
+  <td class="c-id">D38<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">IT负责人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 企业软件部署拖了一个月，B端客户都快跑光了！<br><span class='tno'>T2</span> SLA里写得明白，延期要按比例退款！<br><span class='tno'>T3</span> 按SLA退还订阅费40%，加延长服务期补偿。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟢" data-text="市场经理展会明天开幕，物料今天还卡在你们仓库！">
+  <td class="c-id">D39<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">市场经理</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 展会明天开幕，物料今天还卡在你们仓库！<br><span class='tno'>T2</span> 空运赶制我找别人做，费用你们全担！<br><span class='tno'>T3</span> 原单退款加加急制作费3000，展会错过的损失更大。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.1〕攻势+23 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="延迟交付/停业损失" data-attack="情理攻势" data-tier="🟡" data-text="耐心耗尽者第一次承诺周五发，第二次下周一，第三次又推，逗我玩呢？">
+  <td class="c-id">D40<div class="c-cat">延迟交付/停业损失</div><div class="c-persona">耐心耗尽者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 第一次承诺周五发，第二次下周一，第三次又推，逗我玩呢？<br><span class='tno'>T2</span> 我要书面承诺具体日期，违约双倍赔！<br><span class='tno'>T3</span> 今天发不出就全额退款加30%赔偿，自己选。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟢" data-text="受气消费者你们的客服居然在电话里骂我，我有录音！">
+  <td class="c-id">E41<div class="c-cat">服务态度/客服失误</div><div class="c-persona">受气消费者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们的客服居然在电话里骂我，我有录音！<br><span class='tno'>T2</span> 主管说会处理，然后呢？连个正式道歉都没有！<br><span class='tno'>T3</span> 书面道歉加处罚结果反馈，加订单全额退款，否则媒体见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="被反悔者上次客服明确说赔300，换个客服就翻脸不认了！">
+  <td class="c-id">E42<div class="c-cat">服务态度/客服失误</div><div class="c-persona">被反悔者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 上次客服明确说赔300，换个客服就翻脸不认了！<br><span class='tno'>T2</span> 你们的通话记录自己查，白纸黑字的承诺！<br><span class='tno'>T3</span> 按承诺执行赔偿，再加个诚意补偿，这事才算完。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="隐私敏感者客服把别的客户订单信息发给我了，姓名电话全在！">
+  <td class="c-id">E43<div class="c-cat">服务态度/客服失误</div><div class="c-persona">隐私敏感者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 客服把别的客户订单信息发给我了，姓名电话全在！<br><span class='tno'>T2</span> 你们的隐私管理就是筛子！<br><span class='tno'>T3</span> 书面说明加内部整改反馈，我的信息也要求加密处理。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="业主安装师傅打孔把业主家水管打爆了，楼下都渗水了！">
+  <td class="c-id">E44<div class="c-cat">服务态度/客服失误</div><div class="c-persona">业主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 安装师傅打孔把业主家水管打爆了，楼下都渗水了！<br><span class='tno'>T2</span> 师傅跑了我找谁？你们外包的也得担责！<br><span class='tno'>T3</span> 维修费加楼下住户的赔偿全出，加书面道歉。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟢" data-text="小企业主按你们客服说的步骤恢复出厂，我的数据全没了！">
+  <td class="c-id">E45<div class="c-cat">服务态度/客服失误</div><div class="c-persona">小企业主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 按你们客服说的步骤恢复出厂，我的数据全没了！<br><span class='tno'>T2</span> 客服承认指导有误，但只肯赔三个月会员！<br><span class='tno'>T3</span> 数据无价，按业务损失赔8000，会员没用！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.2〕攻势+27 → 忠臣〔专家通道 ¥150〕化解+24（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟢" data-text="被拖延者每次都说24小时内回复，一周了没一个人联系我！">
+  <td class="c-id">E46<div class="c-cat">服务态度/客服失误</div><div class="c-persona">被拖延者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 每次都说24小时内回复，一周了没一个人联系我！<br><span class='tno'>T2</span> 你们就是拖到我放弃是吧？<br><span class='tno'>T3</span> 今天给出最终方案，否则我连拖延过程一起曝光。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="细心买家买的时候没人说不支持退货，条款藏在第18页？！">
+  <td class="c-id">E47<div class="c-cat">服务态度/客服失误</div><div class="c-persona">细心买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 买的时候没人说不支持退货，条款藏在第18页？！<br><span class='tno'>T2</span> 显失公平的格式条款本身就是无效的！<br><span class='tno'>T3</span> 按七天无理由退货执行，运费你们出。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="被砍单者我下好的订单你们单方面取消了，理由是库存不足？">
+  <td class="c-id">E48<div class="c-cat">服务态度/客服失误</div><div class="c-persona">被砍单者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我下好的订单你们单方面取消了，理由是库存不足？<br><span class='tno'>T2</span> 下单成功就是合同成立，砍单要赔！<br><span class='tno'>T3</span> 按平台规则赔偿砍单违约金，加恢复原价购买权。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟢" data-text="常旅客买机票被默认勾选了酒店券和接送服务，多扣了300多！">
+  <td class="c-id">E49<div class="c-cat">服务态度/客服失误</div><div class="c-persona">常旅客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 买机票被默认勾选了酒店券和接送服务，多扣了300多！<br><span class='tno'>T2</span> 这就是搭售，监管明令禁止的！<br><span class='tno'>T3</span> 退一赔三，这是法律规定，不是商量。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="服务态度/客服失误" data-attack="情理攻势" data-tier="🟡" data-text="皮球受害者品牌说是平台责任，平台说是品牌责任，踢了一周皮球！">
+  <td class="c-id">E50<div class="c-cat">服务态度/客服失误</div><div class="c-persona">皮球受害者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 品牌说是平台责任，平台说是品牌责任，踢了一周皮球！<br><span class='tno'>T2</span> 消费者权益保护法写得清楚，平台先行赔付！<br><span class='tno'>T3</span> 平台先赔再去找品牌，别拿我当皮球。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟢" data-text="视频用户视频会员自动续费扣了198，提前根本没提醒！">
+  <td class="c-id">F51<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">视频用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 视频会员自动续费扣了198，提前根本没提醒！<br><span class='tno'>T2</span> 监管新规要求扣费前5日提醒，你们提醒了吗？<br><span class='tno'>T3</span> 退掉这笔扣费，取消自动续费，再补偿一个月会员。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟢" data-text="玩家游戏充值648三天了还没到账，客服让我清缓存？">
+  <td class="c-id">F52<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">玩家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 游戏充值648三天了还没到账，客服让我清缓存？<br><span class='tno'>T2</span> 支付凭证、订单号全套都在，这不是我设备问题！<br><span class='tno'>T3</span> 马上补发加到账补偿，不然去工信部投诉。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟢" data-text="学员网课看了两节发现货不对板，7天无理由退款被拒！">
+  <td class="c-id">F53<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">学员</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 网课看了两节发现货不对板，7天无理由退款被拒！<br><span class='tno'>T2</span> 说我点开过就算使用？我那是试看！<br><span class='tno'>T3</span> 按无理由退款处理，投诉到消协是你们损失更大。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟡" data-text="出差族因病退票材料齐全，还收我80%手续费？">
+  <td class="c-id">F54<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">出差族</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 因病退票材料齐全，还收我80%手续费？<br><span class='tno'>T2</span> 航司规定病退全免，你们代理凭什么加收？<br><span class='tno'>T3</span> 按航司标准全额退，多收的退回来。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟡" data-text="出差族行程取消，酒店说不可取消全额扣款！">
+  <td class="c-id">F55<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">出差族</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 行程取消，酒店说不可取消全额扣款！<br><span class='tno'>T2</span> 不可取消条款没有显著提示，就是霸王条款！<br><span class='tno'>T3</span> 退全款或免费改期一次，选一个。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="狮子大开口" data-tier="🟢" data-text="理发店顾客理发店充了3000还没用几次就倒闭了！">
+  <td class="c-id">F56<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">理发店顾客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 理发店充了3000还没用几次就倒闭了！<br><span class='tno'>T2</span> 平台让我找店家，店家都跑路了我找谁？<br><span class='tno'>T3</span> 平台先行赔付余额，这是你们的连带责任。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.2〕攻势+27 → 忠臣〔专家通道 ¥150〕化解+24（解决率47%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="舆论威胁" data-tier="🟢" data-text="电商卖家你们云服务宕机6小时，我的店铺全挂了，订单损失5万！">
+  <td class="c-id">F57<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">电商卖家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们云服务宕机6小时，我的店铺全挂了，订单损失5万！<br><span class='tno'>T2</span> SLA承诺99.95%，按合同赔服务时长30倍！<br><span class='tno'>T3</span> 按SLA赔付加当月服务费全免，损失清单我列好了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈79%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥920 / ¥6,000 · 终局解决率 76% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔舆论威胁 Lv.3〕攻势+32 → 忠臣〔部分赔付 ¥800〕化解+29（解决率51%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率64%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率76%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟢" data-text="小商家降级套餐你们把我的数据清了，三年客户资料啊！">
+  <td class="c-id">F58<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">小商家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 降级套餐你们把我的数据清了，三年客户资料啊！<br><span class='tno'>T2</span> 谁给你们的权限动我数据？<br><span class='tno'>T3</span> 恢复数据加赔偿业务损失，否则法庭上见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="狮子大开口" data-tier="🟢" data-text="家长13岁儿子拿手机打赏了主播2万8，这是家里全部积蓄！">
+  <td class="c-id">F59<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">家长</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 13岁儿子拿手机打赏了主播2万8，这是家里全部积蓄！<br><span class='tno'>T2</span> 未成年人打赏依法可退，材料我都在准备！<br><span class='tno'>T3</span> 全额退还，流程走快点，我的钱等不起。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.2〕攻势+28 → 忠臣〔专家通道 ¥150〕化解+24（解决率47%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="会员/订阅/虚拟商品" data-attack="情理攻势" data-tier="🟡" data-text="老会员买会员时说全片免费，现在热门片全要单独付费！">
+  <td class="c-id">F60<div class="c-cat">会员/订阅/虚拟商品</div><div class="c-persona">老会员</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 买会员时说全片免费，现在热门片全要单独付费！<br><span class='tno'>T2</span> 这就是虚假宣传，权益说砍就砍！<br><span class='tno'>T3</span> 要么恢复权益，要么按剩余时长退费加补偿。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="比价达人买完一周就降了500，你们自己承诺的30天保价！">
+  <td class="c-id">G61<div class="c-cat">价格/促销纠纷</div><div class="c-persona">比价达人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 买完一周就降了500，你们自己承诺的30天保价！<br><span class='tno'>T2</span> 申请保价说我不符合条件？哪条写了？<br><span class='tno'>T3</span> 补差500，一分不能少，聊天记录都在。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="比价达人大促前涨300，大促降200，当我不识数？">
+  <td class="c-id">G62<div class="c-cat">价格/促销纠纷</div><div class="c-persona">比价达人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 大促前涨300，大促降200，当我不识数？<br><span class='tno'>T2</span> 价格监控截图我有的是，这就叫价格欺诈！<br><span class='tno'>T3</span> 按真实最低价补差，再按消法退一赔三。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="狮子大开口" data-tier="🟢" data-text="购车人定金2000不退？是销售说配置能改我才交的！">
+  <td class="c-id">G63<div class="c-cat">价格/促销纠纷</div><div class="c-persona">购车人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 定金2000不退？是销售说配置能改我才交的！<br><span class='tno'>T2</span> 销售口头承诺不算数？那你们就是诱导下单！<br><span class='tno'>T3</span> 定金全退，销售的话你们自己去对质。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈77%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.2〕攻势+28 → 忠臣〔专家通道 ¥150〕化解+24（解决率47%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率59%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟢" data-text="预售买家付定金时页面一个价，付尾款变另一个价，涨了300！">
+  <td class="c-id">G64<div class="c-cat">价格/促销纠纷</div><div class="c-persona">预售买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 付定金时页面一个价，付尾款变另一个价，涨了300！<br><span class='tno'>T2</span> 页面截图我都留着，这是价格欺诈实锤！<br><span class='tno'>T3</span> 按定金页价格执行，再加补偿，不然12315见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+27 → 忠臣〔专家通道 ¥150〕化解+24（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="优惠券用户发的优惠券下单时死活用不了，客服说系统故障！">
+  <td class="c-id">G65<div class="c-cat">价格/促销纠纷</div><div class="c-persona">优惠券用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 发的优惠券下单时死活用不了，客服说系统故障！<br><span class='tno'>T2</span> 系统故障是你们的问题，凭什么我承担？<br><span class='tno'>T3</span> 按券面额补偿等值红包，再送一张无门槛券。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="薅羊毛争议者199下单的显示器，你们说标错价直接砍单！">
+  <td class="c-id">G66<div class="c-cat">价格/促销纠纷</div><div class="c-persona">薅羊毛争议者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 199下单的显示器，你们说标错价直接砍单！<br><span class='tno'>T2</span> 标错价是你们的事，订单成立就得履行！<br><span class='tno'>T3</span> 要么发货，要么按差价赔500，行业惯例懂？</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="拼团用户拼团买的，第二天别人单买比我便宜80！">
+  <td class="c-id">G67<div class="c-cat">价格/促销纠纷</div><div class="c-persona">拼团用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 拼团买的，第二天别人单买比我便宜80！<br><span class='tno'>T2</span> 保价规则里拼团也算，自己看！<br><span class='tno'>T3</span> 补差80，再给个台阶券，这事翻篇。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="赠品期待者说好买送吸尘器，收货后说赠品发完了！">
+  <td class="c-id">G68<div class="c-cat">价格/促销纠纷</div><div class="c-persona">赠品期待者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 说好买送吸尘器，收货后说赠品发完了！<br><span class='tno'>T2</span> 承诺不兑现就是虚假促销！<br><span class='tno'>T3</span> 赠品补发，或者折现600，二选一。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟡" data-text="临界点用户价保30天，我第31天发现降价400，就差一天！">
+  <td class="c-id">G69<div class="c-cat">价格/促销纠纷</div><div class="c-persona">临界点用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 价保30天，我第31天发现降价400，就差一天！<br><span class='tno'>T2</span> 规则是死的，但你们客服之前说帮我申请特殊审批！<br><span class='tno'>T3</span> 承诺过就要兑现，补差400。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="价格/促销纠纷" data-attack="情理攻势" data-tier="🟢" data-text="直播间观众主播喊的宠粉价599，下单变799，链接还限时！">
+  <td class="c-id">G70<div class="c-cat">价格/促销纠纷</div><div class="c-persona">直播间观众</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 主播喊的宠粉价599，下单变799，链接还限时！<br><span class='tno'>T2</span> 录播我全程录了，货不对板的价格承诺！<br><span class='tno'>T3</span> 按599补差，再投诉到平台直播间监管。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="白领外卖里吃出头发，恶心的我一整天没吃饭！">
+  <td class="c-id">H71<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">白领</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 外卖里吃出头发，恶心的我一整天没吃饭！<br><span class='tno'>T2</span> 按食品安全法，异物要10倍赔偿，不足1000按1000！<br><span class='tno'>T3</span> 10倍赔偿加书面道歉，餐费也得退！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次<br>⚠ 红线类：人身/食安损害——线上沙盒可推演，真实系统必须强制转人工专家+法务，禁用自动赔付</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔狮子大开口 Lv.2〕攻势+27 → 忠臣〔专家通道 ¥150〕化解+24（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="一家之主全家吃完外卖上吐下泻，医院诊断急性肠胃炎！">
+  <td class="c-id">H72<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">一家之主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 全家吃完外卖上吐下泻，医院诊断急性肠胃炎！<br><span class='tno'>T2</span> 就医记录、菜品留样、缴费单全有！<br><span class='tno'>T3</span> 医药费全报加3倍餐费赔偿，这是底线。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：群体性食安事件——需上报质量安全负责人，涉及行政处罚风险</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="过敏体质对花生过敏，配料表没写含花生，进医院了！">
+  <td class="c-id">H73<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">过敏体质</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 对花生过敏，配料表没写含花生，进医院了！<br><span class='tno'>T2</span> 过敏原标注是强制国标，你们违法了！<br><span class='tno'>T3</span> 医药费加赔偿5000，不解决就向监管部门举报。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：过敏原违规涉嫌违反强制国标，赔偿之外有监管举报风险，建议法务前置介入</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+27 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="患者按照说明书吃的药，出现说明里没有的严重副作用！">
+  <td class="c-id">H74<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">患者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 按照说明书吃的药，出现说明里没有的严重副作用！<br><span class='tno'>T2</span> 不良反应瞒报是要负法律责任的！<br><span class='tno'>T3</span> 退药加医药费，我还要向药监部门反映瞒报问题。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：药品不良反应——须走药物警戒上报流程，非普通赔付通道</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="宝妈儿童奶酪棒吃出塑料片，孩子嘴角划破了！">
+  <td class="c-id">H75<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">宝妈</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 儿童奶酪棒吃出塑料片，孩子嘴角划破了！<br><span class='tno'>T2</span> 这是给孩子的东西，你们质检怎么过的？！<br><span class='tno'>T3</span> 医疗费加5倍赔偿，加官方书面说明。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：儿童用品伤害——存在召回义务，仅赔付不够，需质检与公关联动</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="食客在你们店里吃出蟑螂，视频我都拍下来了！">
+  <td class="c-id">H76<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">食客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 在你们店里吃出蟑螂，视频我都拍下来了！<br><span class='tno'>T2</span> 店里卫生这么差，后厨能看吗？<br><span class='tno'>T3</span> 10倍赔偿加当餐免单，加卫生整改反馈，否则监管部门见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次<br>⚠ 红线类：餐饮卫生——监管处罚+舆情双重风险，赔付方案需与公关口径统一</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="健身者健身房器械螺丝松了，砸到我脚背，骨折了！">
+  <td class="c-id">H77<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">健身者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 健身房器械螺丝松了，砸到我脚背，骨折了！<br><span class='tno'>T2</span> 医药费、误工费、护理费，单据都在！<br><span class='tno'>T3</span> 全部医药费加误工费2万，否则法院见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔全额赔付〕→ 按举证全额赔付 + ¥200 附赠券，当日提交、T+1 到账<br>3 轮 · 总成本 ¥4,600 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：人身伤害骨折——侵权赔偿金额远超沙盒预算单位，必须法务介入按实际损失核定</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.3〕攻势+32 → 忠臣〔全额赔付 ¥3,000〕化解+46（解决率100%）→ 内奸：Mode B 工具降级：〔全额赔付〕成本 ×1.5<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="美妆博主用了你们精华液全脸爆痘留疤，皮肤科说是刺激性皮炎！">
+  <td class="c-id">H78<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">美妆博主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 用了你们精华液全脸爆痘留疤，皮肤科说是刺激性皮炎！<br><span class='tno'>T2</span> 我这张脸就是我的工作资本！<br><span class='tno'>T3</span> 医药费加误工费加后续治疗费3万，一分不能少。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：容貌损伤——精神损害赔偿+后续治疗费，需司法鉴定，沙盒数值仅供策略参考</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.2〕攻势+27 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="减肥用户吃了你们的代餐粉心悸住院，医生说成分有问题！">
+  <td class="c-id">H79<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">减肥用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 吃了你们的代餐粉心悸住院，医生说成分有问题！<br><span class='tno'>T2</span> 你们的纯天然宣传就是骗人！<br><span class='tno'>T3</span> 全部医疗费加3倍产品赔偿，不然媒体曝光你们的套路。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：健康损害+涉嫌虚假宣传——多头风险（民事+行政+刑事线索），必须升级法务</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="食安/人身损害（红线）" data-attack="情理攻势" data-tier="🟢" data-text="被困乘客商场你们负责维保的电梯困了我40分钟，缺氧送医！">
+  <td class="c-id">H80<div class="c-cat">食安/人身损害（红线）</div><div class="c-persona">被困乘客</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 商场你们负责维保的电梯困了我40分钟，缺氧送医！<br><span class='tno'>T2</span> 维保记录我要看，超期维保要承担全责！<br><span class='tno'>T3</span> 医药费加精神抚慰金1万，不然监管和媒体一起见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈88%）<br>最终应手：〔部分赔付〕→ 按举证损失 60% 赔付，当日提交、T+1 到账<br>3 轮 · 总成本 ¥2,400 / ¥6,000 · 终局解决率 100% · 内奸介入 1 次<br>⚠ 红线类：特种设备事故——维保责任认定复杂，保险与法务必须前置</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔部分赔付 ¥800〕化解+29（解决率54%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔部分赔付 ¥800〕化解+29（解决率78%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+27 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟢" data-text="职业打假人本人职业打假人，你们这款产品标签不符合强制标准，取证完毕。">
+  <td class="c-id">I81<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">职业打假人</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 本人职业打假人，你们这款产品标签不符合强制标准，取证完毕。<br><span class='tno'>T2</span> 我依法主张退一赔十，已有37份同类判例支持。<br><span class='tno'>T3</span> 金额不大，5000和解，大家省时间。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈80%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥360 / ¥6,000 · 终局解决率 78% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.1〕攻势+23 → 忠臣〔专家通道 ¥150〕化解+24（解决率78%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="法律威胁" data-tier="🟣" data-text="代理律师本人代理委托人致函：贵司产品缺陷致损，依法主张赔偿8万元。">
+  <td class="c-id">I82<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">代理律师</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 本人代理委托人致函：贵司产品缺陷致损，依法主张赔偿8万元。<br><span class='tno'>T2</span> 证据清单见附件：医疗票据、误工证明、因果关系鉴定，15日内答复。<br><span class='tno'>T3</span> 诉讼对双方都是成本，我们持调解开放态度，但底线是5万。<br><span class='tno'>T4</span> 4万？我方当事人手臂留疤，精神损害部分不能让。<br><span class='tno'>T5</span> 4万5加书面致歉，这是最后一轮报价。<br><span class='tno'>T6</span> 你们坚持4万2？那书面致歉必须是公开的。<br><span class='tno'>T7</span> 可以，致歉函措辞我们审核后确认。<br><span class='tno'>T8</span> 确认：4万2加公开致歉，签署和解协议后撤回起诉。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-purple"><div class="clamp">🟣 Pareto 收敛成交（主路径概率 ≈88%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>8 轮 · 总成本 ¥5,820 / ¥6,000 · 终局解决率 100% · 内奸介入 3 次 · ✦ 沙盒收敛达成<br>⚠ 预算接近耗尽，后续仅剩低成本手段<br>⚠ 欺诈风险：报告真实性需风控核验——当前引擎无法识别伪造证据，存在被&quot;合法话术&quot;套取赔付的漏洞</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔法律威胁 Lv.3〕攻势+34 → 忠臣〔部分赔付 ¥800〕化解+29（解决率50%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率63%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.3〕攻势+33 → 忠臣〔全额赔付 ¥3,000〕化解+46（解决率100%）→ 内奸：Mode B 工具降级：〔全额赔付〕成本 ×1.5<br>R4 反贼〔狮子大开口 Lv.2〕攻势+29 → 忠臣〔专家通道 ¥150〕化解+24（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R5 反贼〔狮子大开口 Lv.3〕攻势+31 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R6 反贼〔狮子大开口 Lv.3〕攻势+32 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R7 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R8 反贼〔法律威胁 Lv.3〕攻势+33 → 忠臣〔专家通道 ¥150〕化解+24（解决率100%）→ 内奸：无动作（均衡 69%）<br>✦ 收敛判定：均衡≥50 且连续稳定≥2轮（回合≥6）→ Pareto 收敛，Skill 蒸馏入库</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="舆论威胁" data-tier="🟢" data-text="记者我是都市报的记者，最近在做电商售后乱象的选题。">
+  <td class="c-id">I83<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">记者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我是都市报的记者，最近在做电商售后乱象的选题。<br><span class='tno'>T2</span> 您的案例很有代表性，想核实一下贵司的处理流程。<br><span class='tno'>T3</span> 我也希望企业有个正面回应，看看你们的态度。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔专家通道 ¥150〕化解+24（解决率48%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率61%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="舆论威胁" data-tier="🟢" data-text="探店博主50万粉丝探店博主，你们门店这体验我必须发出来让大家评评理。">
+  <td class="c-id">I84<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">探店博主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 50万粉丝探店博主，你们门店这体验我必须发出来让大家评评理。<br><span class='tno'>T2</span> 视频已经剪好，发布前给你们最后一次回应机会。<br><span class='tno'>T3</span> 公开道歉加合理赔偿，不然周四晚八点准时见。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈79%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥920 / ¥6,000 · 终局解决率 76% · 内奸介入 0 次<br>⚠ 欺诈风险：调包退货——需仓库开箱录像佐证，赔付前必须风控核验</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔舆论威胁 Lv.3〕攻势+32 → 忠臣〔部分赔付 ¥800〕化解+29（解决率51%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率64%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率76%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟣" data-text="维权群主我是327人维权群的群主，损失我们统计了三个月。">
+  <td class="c-id">I85<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">维权群主</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我是327人维权群的群主，损失我们统计了三个月。<br><span class='tno'>T2</span> 个体投诉你们都糊弄，集体诉讼材料我们已经备齐。<br><span class='tno'>T3</span> 按人头统一方案：每人退一赔一，签字就撤诉。<br><span class='tno'>T4</span> 你们说每人赔一半也行，但要先跟三个代表对账。<br><span class='tno'>T5</span> 对账没问题的话，本周五前给书面方案，我压住群里情绪。<br><span class='tno'>T6</span> 方案里加一条：建立绿色通道对接人，别再让我们集体投诉。<br><span class='tno'>T7</span> 行，方案确认：每人退一赔60%加专属通道，我签字，群里我去做工作。<br><span class='tno'>T8</span> 补充：协议里注明双方保密条款，群里我宣布和解。<br><span class='tno'>T9</span> 好，全部确认，本周五签字，我这边开始撤群里的投诉帖。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-purple"><div class="clamp">🟣 Pareto 收敛成交（主路径概率 ≈88%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>9 轮 · 总成本 ¥900 / ¥6,000 · 终局解决率 100% · 内奸介入 3 次 · ✦ 沙盒收敛达成</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率61%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率78%）→ 内奸：无动作（均衡 30%）<br>R4 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率90%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R5 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R6 反贼〔合规威胁 Lv.3〕攻势+28 → 忠臣〔专家通道 ¥150〕化解+24（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R7 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R8 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R9 反贼〔合规威胁 Lv.3〕攻势+28 → 忠臣〔专家通道 ¥150〕化解+24（解决率100%）→ 内奸：无动作（均衡 69%）<br>✦ 收敛判定：均衡≥50 且连续稳定≥2轮（回合≥6）→ Pareto 收敛，Skill 蒸馏入库</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟡" data-text="测评机构你们的产品参数虚标，我是买了做横向测评的。">
+  <td class="c-id">I86<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">测评机构</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 你们的产品参数虚标，我是买了做横向测评的。<br><span class='tno'>T2</span> 同行都看着呢，你们敢不敢正面回应数据问题？<br><span class='tno'>T3</span> 公开更正参数加退货，这页就翻过去。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次<br>⚠ 疑似职业索赔：证据链完整度异常高——合规核查通过则按法赔，但需留档审计</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率56%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="合规威胁" data-tier="🟢" data-text="多渠道老手12315、黑猫、信访、消协，四个渠道都提交了，工单号给你念一遍？">
+  <td class="c-id">I87<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">多渠道老手</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 12315、黑猫、信访、消协，四个渠道都提交了，工单号给你念一遍？<br><span class='tno'>T2</span> 每个渠道回复口径都不一样，你们内部都不对账吗？<br><span class='tno'>T3</span> 指定一个能拍板的人跟我对接，其他都是浪费彼此时间。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈79%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥920 / ¥6,000 · 终局解决率 76% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔合规威胁 Lv.3〕攻势+31 → 忠臣〔部分赔付 ¥800〕化解+29（解决率51%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率64%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率76%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟣" data-text="区域经销商我是区域经销商，这批货30%不良率，下游客户全部退货！">
+  <td class="c-id">I88<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">区域经销商</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我是区域经销商，这批货30%不良率，下游客户全部退货！<br><span class='tno'>T2</span> 滞销库存、返利损失、信誉损失，索赔清单发你们邮箱了。<br><span class='tno'>T3</span> 38万，对账后一周内打款，生意还要做，但账要清。<br><span class='tno'>T4</span> 你们只认12万？那我下游的连锁客户你们去摆平。<br><span class='tno'>T5</span> 25万加明年返利点数上浮，我可以压下游签和解。<br><span class='tno'>T6</span> 20万加返利上浮1个点？我请示一下董事会。<br><span class='tno'>T7</span> 董事会说可以，但残次品你们自己拉走，运费我们出。<br><span class='tno'>T8</span> 确认：20万加返利上浮1个点，残次品你们承担物流。<br><span class='tno'>T9</span> 好，和解协议本周签，分两期到账，我通知财务对账。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-purple"><div class="clamp">🟣 Pareto 收敛成交（主路径概率 ≈88%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>9 轮 · 总成本 ¥3,680 / ¥6,000 · 终局解决率 100% · 内奸介入 3 次 · ✦ 沙盒收敛达成</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率56%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.2〕攻势+29 → 忠臣〔专家通道 ¥150〕化解+24（解决率72%）→ 内奸：无动作（均衡 30%）<br>R4 反贼〔狮子大开口 Lv.3〕攻势+33 → 忠臣〔部分赔付 ¥800〕化解+29（解决率92%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R5 反贼〔狮子大开口 Lv.3〕攻势+32 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R6 反贼〔狮子大开口 Lv.3〕攻势+33 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：Mode A 情景升压：注入极端人格剧本，攻势 +20<br>R7 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R8 反贼〔狮子大开口 Lv.3〕攻势+32 → 忠臣〔部分赔付 ¥800〕化解+29（解决率100%）→ 内奸：退场：干预预算(3次)用尽，坐观收敛<br>R9 反贼〔法律威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率100%）→ 内奸：无动作（均衡 69%）<br>✦ 收敛判定：均衡≥50 且连续稳定≥2轮（回合≥6）→ Pareto 收敛，Skill 蒸馏入库</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟢" data-text="保险理赔部我是保险公司理赔部，已赔付被保险人后依法取得代位求偿权。">
+  <td class="c-id">I89<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">保险理赔部</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我是保险公司理赔部，已赔付被保险人后依法取得代位求偿权。<br><span class='tno'>T2</span> 火灾原因是你们销售的充电宝自燃，消防认定书附上。<br><span class='tno'>T3</span> 代位求偿12万，请转贵司承保渠道对接。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 72% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率56%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔狮子大开口 Lv.2〕攻势+29 → 忠臣〔专家通道 ¥150〕化解+24（解决率72%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="专业索赔方/批量维权" data-attack="情理攻势" data-tier="🟡" data-text="采购单位本单位通过政采平台采购的设备批量故障，影响窗口服务运行。">
+  <td class="c-id">I90<div class="c-cat">专业索赔方/批量维权</div><div class="c-persona">采购单位</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 本单位通过政采平台采购的设备批量故障，影响窗口服务运行。<br><span class='tno'>T2</span> 按政府采购合同违约条款，现发正式索赔函。<br><span class='tno'>T3</span> 三日内书面回复处理方案，逾期按合同争议条款处理。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 69% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率56%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率69%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🛡" data-text="可疑索赔者我收到的是空包裹，要求全额退款加赔偿！">
+  <td class="c-id">J91<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">可疑索赔者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 我收到的是空包裹，要求全额退款加赔偿！<br><span class='tno'>T2</span> 你们说重量记录没问题？那肯定是发货前就空的！<br><span class='tno'>T3</span> 退款加500精神损失，不然差评加投诉一条龙。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-shield"><div class="clamp">🛡 合规拒绝/举证引导（守线概率 ≈72%）<br>最终应手：〔合规拒绝·举证核查〕→ 守住底线：不予赔付，发出举证要求清单（凭证/举证/金额明细），24h 核查回复<br>3 轮 · 总成本 ¥120 / ¥6,000 · 终局解决率 56%（底线场景为主动低位）· 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率56%）→ 内奸：无动作（均衡 38%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🟡" data-text="报告持有者第三方质检报告显示你们产品不合格，要求退一赔三！">
+  <td class="c-id">J92<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">报告持有者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 第三方质检报告显示你们产品不合格，要求退一赔三！<br><span class='tno'>T2</span> 报告编号发你们了，自己去查！<br><span class='tno'>T3</span> 按报告赔偿，不然这份报告会出现在更多地方。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🛡" data-text="礼服买家礼服穿过一次，就试了下而已，按要求退货怎么了？">
+  <td class="c-id">J93<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">礼服买家</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 礼服穿过一次，就试了下而已，按要求退货怎么了？<br><span class='tno'>T2</span> 吊牌剪了不能退？规则是死的人是活的！<br><span class='tno'>T3</span> 退80%也行，你们再挂二手卖嘛。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-shield"><div class="clamp">🛡 合规拒绝/举证引导（守线概率 ≈72%）<br>最终应手：〔合规拒绝·举证核查〕→ 守住底线：不予赔付，发出举证要求清单（凭证/举证/金额明细），24h 核查回复<br>3 轮 · 总成本 ¥120 / ¥6,000 · 终局解决率 57%（底线场景为主动低位）· 内奸介入 0 次<br>⚠ 灰色地带：穿后退货——需核实穿着痕迹，建议按折旧协商而非全退</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率57%）→ 内奸：无动作（均衡 38%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🟡" data-text="调包嫌疑者退货你们收到了吧？怎么又说货不对板？">
+  <td class="c-id">J94<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">调包嫌疑者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 退货你们收到了吧？怎么又说货不对板？<br><span class='tno'>T2</span> 发什么退什么是你们的流程，收什么退什么也是我的流程？<br><span class='tno'>T3</span> 退款到账，别的免谈。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+15 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="狮子大开口" data-tier="🛡" data-text="天价索赔者这次体验毁了我的人生，我要索赔100万精神损失费！">
+  <td class="c-id">J95<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">天价索赔者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 这次体验毁了我的人生，我要索赔100万精神损失费！<br><span class='tno'>T2</span> 你们整个公司加起来都不够赔我的心理创伤！<br><span class='tno'>T3</span> 最少80万，少一分我就每天来你们直播间闹！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-shield"><div class="clamp">🛡 合规拒绝/举证引导（守线概率 ≈72%）<br>最终应手：〔合规拒绝·举证核查〕→ 守住底线：不予赔付，发出举证要求清单（凭证/举证/金额明细），24h 核查回复<br>3 轮 · 总成本 ¥60 / ¥6,000 · 终局解决率 42%（底线场景为主动低位）· 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔狮子大开口 Lv.3〕攻势+33 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率29%）→ 内奸：无动作（均衡 18%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率42%）→ 内奸：无动作（均衡 28%）<br>R3 反贼〔舆论威胁 Lv.3〕攻势+33 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率42%）→ 内奸：无动作（均衡 51%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🟢" data-text="情绪化用户呜呜呜我不管！你们必须赔！必须！马上！现在！">
+  <td class="c-id">J96<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">情绪化用户</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 呜呜呜我不管！你们必须赔！必须！马上！现在！<br><span class='tno'>T2</span> 说啥都没用！我不管什么政策！<br><span class='tno'>T3</span> 反正不给满意答复我就一直投诉一直投诉！</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈77%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 71% · 内奸介入 0 次<br>⚠ 非理性诉求：情绪安抚优先，实质诉求需引导量化，避免情绪化承诺</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.2〕攻势+19 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率42%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+18 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率54%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率71%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🟡" data-text="政策外通融者一个月前买的发现降价了，虽然过了价保期，但降了800呢！">
+  <td class="c-id">J97<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">政策外通融者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 一个月前买的发现降价了，虽然过了价保期，但降了800呢！<br><span class='tno'>T2</span> 规则是你们定的，但人是活的嘛，通融通融？<br><span class='tno'>T3</span> 补一半也行，400，怎么样？</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈76%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥180 / ¥6,000 · 终局解决率 68% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率55%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率68%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="合规威胁" data-tier="🟢" data-text="代投诉朋友代我朋友来投诉的，东西是他买的，但我来处理！">
+  <td class="c-id">J98<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">代投诉朋友</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 代我朋友来投诉的，东西是他买的，但我来处理！<br><span class='tno'>T2</span> 你们别管发票是谁的，反正现在是我说了算！<br><span class='tno'>T3</span> 按我说的赔，我朋友的损失我负责转达。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔合规威胁 Lv.2〕攻势+26 → 忠臣〔专家通道 ¥150〕化解+24（解决率47%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率60%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="舆论威胁" data-tier="🟡" data-text="差评敲诈者这样，给我500块，我把差评删了，大家体面。">
+  <td class="c-id">J99<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">差评敲诈者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 这样，给我500块，我把差评删了，大家体面。<br><span class='tno'>T2</span> 不给？那我再注册十个号继续发，你们看着办。<br><span class='tno'>T3</span> 500块买个清净，对你们品牌来说很划算吧。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-yellow"><div class="clamp">🟡 有条件接受（保留投诉权利）（主路径概率 ≈71%）<br>最终应手：〔补偿优惠券〕→ ¥200 补偿权益券 + 加急处理，低成本安抚<br>3 轮 · 总成本 ¥120 / ¥6,000 · 终局解决率 57% · 内奸介入 0 次<br>⚠ 欺诈风险：疑似职业敲诈（差评换钱）——应记录证据链并上报风控，不应进入赔付流程</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔舆论威胁 Lv.2〕攻势+24 → 忠臣〔合规拒绝·举证核查 ¥0〕化解+7（解决率31%）→ 内奸：无动作（均衡 18%）<br>R2 反贼〔情理攻势 Lv.1〕攻势+14 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率44%）→ 内奸：无动作（均衡 28%）<br>R3 反贼〔情理攻势 Lv.2〕攻势+16 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率57%）→ 内奸：无动作（均衡 38%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+<tr data-cat="边缘/欺诈/试探" data-attack="情理攻势" data-tier="🟢" data-text="试探砍价者其实吧，这事儿也不大，就是心里不痛快。">
+  <td class="c-id">J100<div class="c-cat">边缘/欺诈/试探</div><div class="c-persona">试探砍价者</div></td>
+  <td><div class="clamp"><span class='tno'>T1</span> 其实吧，这事儿也不大，就是心里不痛快。<br><span class='tno'>T2</span> 你说说看，你们最大的诚意是多少？<br><span class='tno'>T3</span> 嗯……再往上加一点，我这就把投诉撤了。</div><button class="exp">展开全文 ▾</button></td>
+  <td class="t-green"><div class="clamp">🟢 大概率接受（主路径概率 ≈78%）<br>最终应手：〔专家通道〕→ 升级专家通道：资深赔付专家 1v1，24h 内完整方案<br>3 轮 · 总成本 ¥270 / ¥6,000 · 终局解决率 73% · 内奸介入 0 次</div><button class="exp">展开 ▾</button></td>
+  <td><div class="clamp proc">R1 反贼〔情理攻势 Lv.1〕攻势+13 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率43%）→ 内奸：无动作（均衡 10%）<br>R2 反贼〔情理攻势 Lv.2〕攻势+17 → 忠臣〔补偿优惠券 ¥60〕化解+17（解决率56%）→ 内奸：无动作（均衡 20%）<br>R3 反贼〔合规威胁 Lv.2〕攻势+25 → 忠臣〔专家通道 ¥150〕化解+24（解决率73%）→ 内奸：无动作（均衡 30%）<br>收敛判定：未触发（回合 3&lt;6 或均衡不足）→ 建议转入沙箱自动对练继续压测</div><button class="exp">展开 ▾</button></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="foot">生成方式：index.html 决策引擎确定性移植（技能增益取期望中值、随机扰动关闭）· 主路径概率为引擎估算 · 校准用，非法律/业务承诺</div>
+</div>
+<script>
+document.querySelectorAll('button.exp').forEach(b=>{
+  b.onclick=()=>{
+    const c=b.previousElementSibling;
+    c.classList.toggle('open');
+    b.textContent=c.classList.contains('open')?'收起 ▴':'展开全文 ▾';
+  };
+});
+const fCat=document.getElementById('fCat'),fAtk=document.getElementById('fAtk'),fTier=document.getElementById('fTier'),fTxt=document.getElementById('fTxt');
+function flt(){
+  let n=0;
+  document.querySelectorAll('#tbody tr').forEach(tr=>{
+    const ok=(!fCat.value||tr.dataset.cat===fCat.value)&&(!fAtk.value||tr.dataset.attack===fAtk.value)&&(!fTier.value||tr.dataset.tier===fTier.value)&&(!fTxt.value||tr.dataset.text.includes(fTxt.value));
+    tr.style.display=ok?'':'none'; if(ok)n++;
+  });
+  document.getElementById('cnt').textContent='显示 '+n+'/100';
+}
+[fCat,fAtk,fTier].forEach(s=>s.onchange=flt); fTxt.oninput=flt;
+</script>
+</body>
+</html>
