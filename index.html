@@ -466,6 +466,10 @@ footer b{color:var(--dim);}
             <div id="dDesc">—</div>
             <div style="margin-top:6px" id="dTags">—</div>
             <div style="margin-top:8px;color:var(--dim);font-size:11px" id="dFeedback"></div>
+            <div id="fbTrainCard" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(70,200,176,.35);border-radius:8px;background:rgba(70,200,176,.06)">
+              <div style="color:var(--hist);font-weight:700;margin-bottom:6px;font-size:12px">🧠 反馈 → 训练 → 验证 链路</div>
+              <div id="fbTrainBody" style="font-size:11px;line-height:1.85;color:var(--dim)"></div>
+            </div>
           </div>
         </div>
         <div class="distill-cta">
@@ -1138,7 +1142,7 @@ function initState(){
     interventions:0, spyBudget:3, converged:false, celebrated:false,
     evidence:'neutral', harm:false, lastSkill:null, lastOfferSkill:null, dealClosed:false, lastAttackType:null, attackMemory:{}, lastRoundCost:0,
     scenarios:[], extraSkills:[], skillVersions:{}, chatTranscript:[],
-    replyHistory:{}, recentReplies:[], pendingSkill:null,
+    replyHistory:{}, recentReplies:[], pendingSkill:null, fbSignals:null, fbTrainingLog:[],
     cfg: deepCopy(DEFAULT_CFG),
     pools: { cash: 6000, coupon: 2000, service: 1000 }, poolSpent: { cash: 0, coupon: 0, service: 0 },
     belowTargetStreak: 0, forceUpgrade: false, currentTarget: 85, v2pred: 30, redlineFlagged: {},
@@ -1330,6 +1334,25 @@ function chooseSkill(gain, evidence, type, level, harm){
   }
   let usable = allSkills().filter(function(sk){ return skillOn(sk) && !isDisabled(sk) && poolCanAfford(sk) && effCost(sk) <= G.budget - G.spent && sk.power >= minPower; });
   if(!usable.length) usable = allSkills().filter(function(sk){ return skillOn(sk) && !isDisabled(sk) && poolCanAfford(sk) && effCost(sk) <= G.budget - G.spent; });
+  // ★ 反馈训练信号：直接改写候选池与排序（反馈在此真正影响决策，而非只写注记）
+  const sig = G.fbSignals || {};
+  if(sig.strategy && sig.strategy.cashOverCoupon){
+    const before = usable.length;
+    const filtered = usable.filter(function(sk){ return sk.id !== 'coupon' && POOL_OF[sk.id] !== 'coupon'; });
+    if(filtered.length){ usable = filtered; log('反馈信号·现金优先于券：已排除券类方案（' + before + '→' + usable.length + ' 项）'); }
+  }
+  if(sig.strategy && (sig.strategy.higherRatio || sig.strategy.fullBias)){
+    const strong = usable.filter(function(sk){ return sk.id==='partial' || sk.id==='full' || sk.power >= 30; });
+    if(strong.length){ usable = strong; log('反馈信号·提高赔付力度：仅保留高力度方案 [' + strong.map(function(sk){return sk.name;}).join('、') + ']'); }
+  }
+  if(sig.strategy && sig.strategy.costDown){
+    usable = usable.slice().sort(function(a,b){ return effCost(a) - effCost(b); });
+    log('反馈信号·成本优先：候选池按成本升序重排');
+  }
+  if(sig.progress && sig.progress.earlyOffer && G.round === 1){
+    const early = usable.filter(function(sk){ return sk.power >= 26; });
+    if(early.length){ usable = early; log('反馈信号·实质方案前置：首回合仅保留力度≥26 的方案'); }
+  }
   if(!usable.length){
     log('决策④ 预算枯竭：可用池为空 → 兜底〔安抚道歉〕零成本硬抗');
     return SKILLS[0];
@@ -1450,16 +1473,69 @@ async function decideTurn(trigger, info, effGain){
   SKILL_TRACE_LOG('内置规则决策：〔' + skill.name + '〕（大模型未启用或调用失败，已回退）');
   return { skill:skill, reply:'', source:'rule' };
 }
-function ruleRetrainSkill(fb, baseSkill){
-  const parts = [];
-  if(fb && fb.rating === 'bad'){
-    if(fb.lang) parts.push('加强针对性共情与自然语言应答');
-    if(fb.progress) parts.push('提前给出明确时效与实质方案');
-    if(fb.strategy) parts.push('按反馈调整工具与金额策略');
-    if(fb.closeIssue) parts.push('成交后停止报价并干净收尾');
-  } else {
-    parts.push('巩固已验证打法并复测反馈关切点');
+/* =====================================================
+   反馈 → 结构化训练信号
+   把自然语言建议解析成可执行信号，真正注入话术层与决策层。
+   ===================================================== */
+function parseFeedbackSignals(fb){
+  const sig = {
+    lang:  { avoid:[], empathize:false, concise:false, noRepeatedAsk:false },
+    progress: { earlyOffer:false, timeCommit:false, fewerRounds:false },
+    strategy: { cashOverCoupon:false, higherRatio:false, costDown:false, fullBias:false },
+    close: { stopReoffer:false },
+    raw: { lang:'', progress:'', strategy:'' },
+  };
+  if(!fb) return sig;
+  const lang = String(fb.lang || ''), prog = String(fb.progress || ''), strat = String(fb.strategy || '');
+  sig.raw = { lang:lang, progress:prog, strategy:strat };
+  // 话术层：引号内短语视作禁用句式；"您看可以吗"类反复询问单独识别
+  const quoted = lang.match(/['"「『]([^'"」』]{2,12})['"」』]/g) || [];
+  quoted.forEach(function(x){ const w = x.replace(/['"「」『』]/g,'').trim(); if(w && sig.lang.avoid.indexOf(w)<0) sig.lang.avoid.push(w); });
+  if(/您看可以吗|可以吗|重复|询问|反复问|停不下来|还在问/.test(lang)){
+    sig.lang.noRepeatedAsk = true;
+    if(sig.lang.avoid.indexOf('您看可以吗')<0) sig.lang.avoid.push('您看可以吗');
   }
+  if(/共情|同理|自然|机械|语气|生硬|冷冰冰/.test(lang)) sig.lang.empathize = true;
+  if(/简洁|简短|啰嗦|太长|精简|开头别|太机械/.test(lang)) sig.lang.concise = true;
+  // 进展层：要求更早给实质方案 / 强化时效 / 减少来回
+  if(/第二回合|早点|提前|立刻|直接|实质|慢|拖|久|三轮|来回/.test(prog)) sig.progress.earlyOffer = true;
+  if(/时效|时间|多久|几天|小时|到账|承诺/.test(prog)) sig.progress.timeCommit = true;
+  if(/来回|重复|磨|绕|打转/.test(prog)) sig.progress.fewerRounds = true;
+  // 策略层：现金优先 / 提高赔付 / 成本优先 / 全额倾向
+  if(/现金|不要券|拒收券|现金比|只接受现金/.test(strat)) sig.strategy.cashOverCoupon = true;
+  if(/比例|更高|多赔|提高/.test(strat)) sig.strategy.higherRatio = true;
+  if(/省成本|降成本|成本优先|降本|省钱|更便宜|成本太高|太贵|用券省/.test(strat)) sig.strategy.costDown = true;
+  if(/全额|全赔/.test(strat)) sig.strategy.fullBias = true;
+  // 收尾层
+  if(fb.closeIssue || /停|收尾|结束|确认/.test(lang + prog + strat)) sig.close.stopReoffer = true;
+  return sig;
+}
+function applySignalSummary(sig){
+  sig = sig || {};
+  const a = [];
+  if(sig.lang){
+    if(sig.lang.avoid && sig.lang.avoid.length) a.push('话术禁用「' + sig.lang.avoid.join('、') + '」');
+    if(sig.lang.empathize) a.push('共情表达增强');
+    if(sig.lang.concise) a.push('表达精简');
+    if(sig.lang.noRepeatedAsk) a.push('禁止重复询问式收尾');
+  }
+  if(sig.progress){
+    if(sig.progress.earlyOffer) a.push('实质方案前置');
+    if(sig.progress.timeCommit) a.push('时效承诺强化');
+    if(sig.progress.fewerRounds) a.push('减少来回拉扯');
+  }
+  if(sig.strategy){
+    if(sig.strategy.cashOverCoupon) a.push('现金优先于券');
+    if(sig.strategy.higherRatio) a.push('赔付比例上调');
+    if(sig.strategy.costDown) a.push('成本优先');
+    if(sig.strategy.fullBias) a.push('全额倾向');
+  }
+  if(sig.close && sig.close.stopReoffer) a.push('成交后停止报价');
+  return a;
+}
+function ruleRetrainSkill(fb, baseSkill){
+  const sig = parseFeedbackSignals(fb);
+  const parts = applySignalSummary(sig);
   if(!parts.length) parts.push('依据体验反馈做定向增强');
   const prevName = baseSkill ? (baseSkill.name || baseSkill.key || '') : '';
   const vm = String(prevName).match(/v(\d+)/);
@@ -1467,11 +1543,14 @@ function ruleRetrainSkill(fb, baseSkill){
   const name = (String(prevName).replace(/\s*v\d+$/,'') || '体验反馈·定向增强') + ' v' + ver;
   return {
     name: name,
-    pathDesc: parts.join(' → '),
+    pathDesc: '按反馈优化应答（' + parts.join('、') + '）',
     desc: '由第三步用户体验反馈驱动重训（尚未经沙箱验证）：' + parts.join('；') + '。',
-    powerDelta: (fb && fb.strategy && /现金|全额|比例|更高/.test(fb.strategy)) ? 4 : 2,
-    costDelta: (fb && fb.strategy && /省|成本|券/.test(fb.strategy)) ? -60 : 0,
+    powerDelta: (sig.strategy && (sig.strategy.higherRatio || sig.strategy.fullBias)) ? 6
+              : (sig.strategy && sig.strategy.cashOverCoupon) ? 4 : 2,
+    costDelta: (sig.strategy && sig.strategy.costDown) ? -120
+             : (sig.strategy && (sig.strategy.higherRatio || sig.strategy.fullBias)) ? 80 : 0,
     fbNote: '基于第三步反馈重训：' + parts.join('；') + '。',
+    signals: parts,
     source: 'rule',
   };
 }
@@ -1479,10 +1558,11 @@ async function llmRetrainSkill(fb, transcript, baseSkill){
   if(!llmEnabled()) return null;
   const system =
     '你是赔付谈判技能训练师。根据第三步用户反馈，重新训练并生成一个升级版技能。\n' +
-    '只返回 JSON：{"name":"技能名(含版本号)","pathDesc":"用 → 连接的自然处理路径","desc":"技能说明","powerDelta":整数,"costDelta":整数,"fbNote":"本次依据反馈做了哪些具体调整"}。\n' +
-    '要求：pathDesc 与 fbNote 必须逐条回应反馈里的语言/进展/策略/收尾建议；不要出现技能库、机制、编号等内部词。';
+    '只返回 JSON：{"name":"技能名(含版本号)","pathDesc":"用 → 连接的自然处理路径","desc":"技能说明","powerDelta":整数,"costDelta":整数,"fbNote":"本次依据反馈做了哪些具体调整","signalsApplied":["信号→如何落实",...]}。\n' +
+    'payload 里的「训练信号」已把反馈解析成结构化条目，必须逐条回应并写入 signalsApplied；不要出现技能库、机制、编号等内部词。';
   const payload = {
     用户反馈: fb,
+    训练信号: applySignalSummary(parseFeedbackSignals(fb)),
     体验对话摘录: (transcript || []).slice(-10),
     基线技能: baseSkill ? { name:baseSkill.name, pathDesc:baseSkill.pathDesc, matchType:baseSkill.matchType, patternId:baseSkill.patternId } : null,
   };
@@ -1496,6 +1576,9 @@ async function llmRetrainSkill(fb, transcript, baseSkill){
   return j;
 }
 async function retrainFromFeedback(fb, transcript, baseSkill){
+  const sig = parseFeedbackSignals(fb);
+  G.fbSignals = sig;
+  G.fbTrainingLog = [];
   let r = null;
   if(llmEnabled()) r = await llmRetrainSkill(fb, transcript, baseSkill);
   if(!r) r = ruleRetrainSkill(fb, baseSkill);
@@ -1517,6 +1600,7 @@ async function retrainFromFeedback(fb, transcript, baseSkill){
     fbNote: r.fbNote || '',
     useCases: (transcript || []).slice(-3),
     source: r.source || 'rule',
+    signals: r.signals || applySignalSummary(sig),
     fromFeedback: true,
   };
 }
@@ -1782,15 +1866,23 @@ function actionKeyFor(skill){
   return 'comfort';
 }
 function sanitizeReply(text){
-  return String(text || '')
+  let out = String(text || '')
     .replace(/〔[^〕]*〕/g,'')
     .replace(/【[^】]*】/g,'')
     .replace(/\bSkill\s*库\b/gi,'')
     .replace(/技能库/g,'')
     .replace(/成本\s*[¥￥]?\s*[\d,]+/g,'')
     .replace(/P\d+\s*(?:力度)?/g,'')
-    .replace(/\s{2,}/g,' ')
     .trim();
+  // ★ 话术层信号：删除反馈中点名的禁用句式（如"您看可以吗"）
+  const sig = G.fbSignals || {};
+  if(sig.lang && sig.lang.avoid && sig.lang.avoid.length){
+    sig.lang.avoid.forEach(function(w){
+      if(w && w.length >= 2) out = out.split(w).join('');
+    });
+    out = out.replace(/[，,]{2,}/g,'，').replace(/[。]{2,}/g,'。').replace(/\s{2,}/g,' ').trim();
+  }
+  return out;
 }
 
 function makeReplyCtx(skill, trigger, info){
@@ -1846,8 +1938,11 @@ function buildReply(skill, trigger, info){
     const a = pickVariant(actions, 'act_' + actionKey, ctx);
     const sp = pickVariant(stylePool, 'style_' + G.cfg.exp.style, ctx);
     const prefix = typeof sp === 'function' ? sp(ctx) : String(sp || '');
-    const op = typeof o === 'function' ? o(ctx) : String(o);
-    const ac = typeof a === 'function' ? a(ctx) : String(a);
+    let op = typeof o === 'function' ? o(ctx) : String(o);
+    let ac = typeof a === 'function' ? a(ctx) : String(a);
+    const sig = G.fbSignals || {};
+    if(sig.lang && sig.lang.empathize && !/理解|抱歉|着急|心情|歉|体谅/.test(op)) op = '我特别理解您的感受，' + op;
+    if(sig.lang && sig.lang.concise) ac = ac.split('。')[0] + '。';
     text = prefix + op + ac;
     if(recent.indexOf(text) === -1) break;
   }
@@ -1964,6 +2059,13 @@ function runRound(trigger){
     const decision = await decideTurn(trigger, info, effGain);
     const skill = decision.skill;
     SKILL_TRACE = null;
+    if(trigger.source === 'sandbox'){
+      const activeSignals = applySignalSummary(G.fbSignals || {});
+      if(activeSignals.length){
+        tr.loyal.lines.push('反馈信号应用（本轮）：' + activeSignals.join('；') + ' → 候选池与话术层已按信号调整');
+        G.fbTrainingLog.push('R' + G.round + '：' + activeSignals.join('、'));
+      }
+    }
     const cost = effCost(skill);
     poolPay(skill);
     if(POOL_OF[skill.id] === 'cash') G.spent += cost;
@@ -2461,9 +2563,12 @@ function distillSkill(stop, best){
     if(fb.lang) parts.push('语言交互：' + fb.lang);
     if(fb.progress) parts.push('进展推进：' + fb.progress);
     if(fb.strategy) parts.push('策略决定：' + fb.strategy);
+    const signals = applySignalSummary(G.fbSignals || {});
     fbNote = (fbBase ? '第三步反馈重训 → 沙箱加压复测 → 本次沉淀：' : '本版变更：') +
-      '吸纳用户反馈（' + (fb.rating==='bad'?'需改进':'确认有效') + '）' + (parts.length ? '——' + parts.join('；') : '') + '。经' + (fb.rating==='bad'?'反贼加压复测通过':'巩固性复测确认') + '。';
-    if(fb.lang) fbNote += '（话术层注记已登记，供话术库迭代）';
+      '吸纳用户反馈（' + (fb.rating==='bad'?'需改进':'确认有效') + '）' + (parts.length ? '——' + parts.join('；') : '') +
+      (signals.length ? '｜已生效信号：' + signals.join('、') : '') +
+      '。经' + (fb.rating==='bad'?'反贼加压复测通过':'巩固性复测确认') + '。';
+    if(fb.lang) fbNote += '（禁用句式与共情策略已写入话术层，下次体验直接生效）';
   }
   return {
     id:'x_' + key + '_' + ver,
@@ -2472,6 +2577,35 @@ function distillSkill(stop, best){
     descShort: '应对' + domType + '场景：' + pathDesc + '（' + log.length + '回合验证，解决率' + Math.round(G.resolution) + '%）。',
     useCases: G.scenarios.map(function(s){ return splitScenario(s.text)[0]; }).filter(Boolean).slice(0,3),
   };
+}
+function renderFbTrainCard(stage, skill){
+  const card = $('fbTrainCard'); if(!card) return;
+  const fb = G.sandbox.feedback;
+  if(!fb){ card.style.display = 'none'; return; }
+  const sig = G.fbSignals || {};
+  const applied = applySignalSummary(sig);
+  const raw = [fb.lang, fb.progress, fb.strategy].filter(Boolean).join(' ｜ ')
+           || (fb.rating === 'good' ? '确认有效（巩固性复测）' : '未填写细节');
+  let html = '';
+  html += '<div>① <b>原始反馈</b>：' + escT(raw) + '</div>';
+  html += '<div>② <b>解析信号</b>：' + (applied.length ? applied.map(escT).join(' ｜ ') : '无具体建议') + '</div>';
+  if(stage === 'done' && skill){
+    html += '<div>③ <b>技能调整</b>：路径=' + escT(String(skill.pathDesc || '').split(' → ').slice(0,4).join(' → '))
+          + ' ｜ 力度 P' + skill.power + ' ｜ 成本 ' + fmtMoney(skill.cost) + '</div>';
+    html += '<div>④ <b>沙箱验证</b>：' + G.sandbox.roundLog.length + ' 回合 ｜ 解决率 ' + Math.round(G.resolution)
+          + '% ｜ 内奸干预 ' + G.interventions + ' 次 → 已沉淀 <b style="color:var(--gold)">' + escT(skill.name) + '</b></div>';
+    if((G.fbTrainingLog || []).length){
+      html += '<div style="margin-top:4px;opacity:.8">决策留痕：' + escT(G.fbTrainingLog.slice(0,4).join(' ｜ '))
+            + (G.fbTrainingLog.length > 4 ? ' …' : '') + '</div>';
+    }
+  } else {
+    html += '<div>③ <b>技能调整</b>：' + (skill
+          ? escT('路径=' + String(skill.pathDesc || '').split(' → ').slice(0,4).join(' → ') + ' ｜ 力度 P' + skill.power + ' ｜ 成本 ' + fmtMoney(skill.cost))
+          : '生成中…') + '</div>';
+    html += '<div>④ <b>沙箱验证</b>：⏳ 即将开始对练，验证通过后沉淀为新版本</div>';
+  }
+  $('fbTrainBody').innerHTML = html;
+  card.style.display = 'block';
 }
 function revealDistill(skill){
   $('dName').textContent = skill.name;
@@ -2484,6 +2618,7 @@ function revealDistill(skill){
   $('dDesc').innerHTML = skill.desc;
   $('dTags').innerHTML = skill.pathDesc.split(' → ').map(function(p){ return '<span class="skd-tag path-step">' + p + '</span>'; }).join('→');
   $('dFeedback').textContent = skill.fbNote || '';
+  renderFbTrainCard('done', skill);
   $('distillPanel').classList.add('show');
   G.sandbox.lastSkill = skill;
   renderHud();
@@ -2799,6 +2934,7 @@ $('fbSubmit').onclick = async function(){
   $('scInfo').textContent = '🧠 正在基于第三步反馈重训技能…';
   const trained = await retrainFromFeedback(G.sandbox.feedback, G.chatTranscript, baseSkill);
   G.pendingSkill = trained;
+  renderFbTrainCard('training', trained);
   annals('🧠 已基于第三步反馈' + (trained.source==='llm'?'由大模型':'由规则引擎') + '重训技能：〔' + trained.name + '〕——' + trained.fbNote, 'gold');
   addMsg('sys', '🧠 反馈已转化为技能调整：' + trained.fbNote + '。即将回到第二步，把新技能放进沙箱重新对练、验证通过后再沉淀。', 'gold');
   fbRating = null;
